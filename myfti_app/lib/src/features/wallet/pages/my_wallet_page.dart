@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'top_up_page.dart';
 
 class MyWalletPage extends StatelessWidget {
   const MyWalletPage({super.key});
@@ -141,11 +142,10 @@ class MyWalletPage extends StatelessWidget {
                     icon: Icons.add_circle_outline,
                     label: 'Top Up',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Halaman Top Up akan segera tersedia.',
-                          ),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TopUpPage(),
                         ),
                       );
                     },

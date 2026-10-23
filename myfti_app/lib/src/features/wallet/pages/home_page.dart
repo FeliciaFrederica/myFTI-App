@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'top_up_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -120,7 +121,14 @@ class HomePage extends StatelessWidget {
                   _buildAction(
                     icon: Icons.add_circle_outline,
                     label: 'Top Up',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TopUpPage(),
+                        ),
+                      );
+                    },
                   ),
                   _buildAction(
                     icon: Icons.send_outlined,
