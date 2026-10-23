@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'src/features/wallet/pages/home_page.dart';
+import 'src/core/navigation/main_navigation.dart';
 
 void main() {
   runApp(const MyFTIApp());
@@ -20,7 +20,7 @@ class MyFTIApp extends StatelessWidget {
         ),
         fontFamily: 'Roboto',
       ),
-      home: const HomePage(),
+      home: const MainNavigation(),
     );
   }
 }

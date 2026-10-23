@@ -189,35 +189,10 @@ class HomePage extends StatelessWidget {
           ),
         ),
       ),
-
-      // Bottom Navigation
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: 0,
-        selectedItemColor: primaryPurple,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet_outlined),
-            label: 'Wallet',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long_outlined),
-            label: 'History',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'Profile',
-          ),
-        ],
-      ),
     );
   }
 
+  // Quick Action Widget
   Widget _buildAction({
     required IconData icon,
     required String label,
@@ -236,7 +211,11 @@ class HomePage extends StatelessWidget {
                 color: const Color(0xFFEDE7F6),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(icon, color: primaryPurple, size: 26),
+              child: Icon(
+                icon,
+                color: primaryPurple,
+                size: 26,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -252,6 +231,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  // Transaction Item Widget
   Widget _buildTransaction({
     required IconData icon,
     required String title,
@@ -266,7 +246,10 @@ class HomePage extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: const Color(0xFFEDE7F6),
-          child: Icon(icon, color: primaryPurple),
+          child: Icon(
+            icon,
+            color: primaryPurple,
+          ),
         ),
         title: Text(
           title,
