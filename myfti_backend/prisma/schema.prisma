@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +5,85 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum TransactionType {
+  TOP_UP
+  TRANSFER_IN
+  TRANSFER_OUT
+  PAYMENT
+  WITHDRAW
+}
+
+enum TransactionStatus {
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  fullName     String
+  email        String   @unique
+  nim          String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  wallet        Wallet?
+  transactions  Transaction[]
+  bankAccounts  BankAccount[]
+  notifications Notification[]
+}
+
+model Wallet {
+  walletId  String   @id @default(cuid())
+  balance   Int      @default(0)
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  reference       String            @unique
+  type            TransactionType
+  status          TransactionStatus @default(SUCCESS)
+  amount          Int
+  description     String?
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transferGroupId String?
+  counterpartName String?
+  bankCode        String?
+  accountNumber   String?
+  createdAt       DateTime          @default(now())
+
+  @@index([userId, createdAt])
+  @@index([transferGroupId])
+}
+
+model BankAccount {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankCode      String
+  accountNumber String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, bankCode, accountNumber])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
 }
