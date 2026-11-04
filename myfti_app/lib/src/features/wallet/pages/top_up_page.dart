@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
 
 class TopUpPage extends StatefulWidget {
   const TopUpPage({super.key});
@@ -14,7 +15,11 @@ class _TopUpPageState extends State<TopUpPage> {
   static const Color textColor = Color(0xFF2D1B46);
 
   final TextEditingController _amountController = TextEditingController();
+  final WalletService _walletService = WalletService();
 
+  bool _isLoading = false;
+  // menunggu token tersedia
+  final String token = 'YOUR_AUTH_TOKEN';
   final List<int> _amountOptions = [
     50000,
     100000,
@@ -23,6 +28,7 @@ class _TopUpPageState extends State<TopUpPage> {
   ];
 
   int? _selectedAmount;
+  String? _amountError;
 
   int get _amount {
     return int.tryParse(_amountController.text) ?? 0;
@@ -41,26 +47,48 @@ class _TopUpPageState extends State<TopUpPage> {
     setState(() {
       _selectedAmount = amount;
       _amountController.clear();
+      _amountError = null;
     });
   }
 
   void _onCustomAmountChanged(String value) {
     setState(() {
       _selectedAmount = null;
+
+      if (_amountError != null) {
+        final amount = int.tryParse(value) ?? 0;
+
+        if (value.isEmpty) {
+          _amountError = 'Nominal wajib diisi.';
+        } else if (amount < 10000) {
+          _amountError = 'Minimal Top Up adalah Rp 10.000.';
+        } else {
+          _amountError = null;
+        }
+      }
     });
   }
 
   void _showConfirmation() {
     final amount = _selectedAmount ?? _amount;
 
+      if (amount <= 0) {
+        setState(() {
+          _amountError = 'Nominal wajib diisi.';
+        });
+        return;
+      }
+
     if (amount < 10000) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Minimal Top Up adalah Rp 10.000.'),
-        ),
-      );
+      setState(() {
+        _amountError = 'Minimal Top Up adalah Rp 10.000.';
+      });
       return;
     }
+
+    setState(() {
+      _amountError = null;
+    });
 
     showDialog<void>(
       context: context,
@@ -70,7 +98,7 @@ class _TopUpPageState extends State<TopUpPage> {
           content: Text(
             'Kamu akan melakukan Top Up sebesar '
             '${_formatRupiah(amount)}.\n\n'
-            'Lanjutkan transaksi simulasi?',
+            'Lanjutkan Top Up?',
           ),
           actions: [
             TextButton(
@@ -84,14 +112,7 @@ class _TopUpPageState extends State<TopUpPage> {
               ),
               onPressed: () {
                 Navigator.pop(dialogContext);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Simulasi Top Up ${_formatRupiah(amount)} berhasil!',
-                    ),
-                  ),
-                );
+                _submitTopUp(amount, token);
               },
               child: const Text('Konfirmasi'),
             ),
@@ -99,6 +120,44 @@ class _TopUpPageState extends State<TopUpPage> {
         );
       },
     );
+  }
+
+  Future<void> _submitTopUp(int amount, String token) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final result = await _walletService.topUp(token, amount);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Top Up ${_formatRupiah(amount)} berhasil!',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      print('Updated wallet: ${result['wallet']}');
+      print('Transaction: ${result['transaction']}');
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -210,15 +269,16 @@ class _TopUpPageState extends State<TopUpPage> {
                 return OutlinedButton(
                   onPressed: () => _selectAmount(amount),
                   style: OutlinedButton.styleFrom(
-                    backgroundColor:
-                        isSelected ? primaryPurple : Colors.white,
-                    foregroundColor:
-                        isSelected ? Colors.white : primaryPurple,
-                    side: BorderSide(
-                      color: isSelected
-                          ? primaryPurple
-                          : const Color(0xFFD1C4E9),
-                    ),
+                    backgroundColor: isSelected
+                      ? const Color(0xFFF3EEFC)
+                      : Colors.white,
+                  foregroundColor: primaryPurple,
+                  side: BorderSide(
+                    color: isSelected
+                        ? primaryPurple
+                        : const Color(0xFFD1C4E9),
+                    width: isSelected ? 1.5 : 1,
+                  ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -256,11 +316,40 @@ class _TopUpPageState extends State<TopUpPage> {
               decoration: InputDecoration(
                 prefixText: 'Rp ',
                 hintText: 'Masukkan nominal',
+                errorText: _amountError,
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
+                  borderSide: const BorderSide(
+                    color: Color(0xFFD1C4E9),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFD1C4E9),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: primaryPurple,
+                    width: 1.5,
+                  ),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: Colors.red,
+                  ),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: Colors.red,
+                    width: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -318,7 +407,7 @@ class _TopUpPageState extends State<TopUpPage> {
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: _showConfirmation,
+                onPressed: _isLoading ? null : _showConfirmation,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryPurple,
                   foregroundColor: Colors.white,
@@ -326,13 +415,22 @@ class _TopUpPageState extends State<TopUpPage> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
-                  'Continue',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Continue',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
 
