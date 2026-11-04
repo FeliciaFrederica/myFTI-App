@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'src/core/navigation/main_navigation.dart';
 
 void main() {
@@ -18,7 +19,7 @@ class MyFTIApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.deepPurple
         ),
-        fontFamily: 'Roboto',
+        fontFamily: GoogleFonts.poppins().fontFamily,
       ),
       home: const MainNavigation(),
     );
