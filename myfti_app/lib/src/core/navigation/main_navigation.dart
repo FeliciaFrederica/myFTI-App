@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/wallet/pages/home_page.dart';
 import '../../features/wallet/pages/my_wallet_page.dart';
+import '../../features/authentication/pages/profile_page.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -18,10 +19,13 @@ class _MainNavigationState extends State<MainNavigation> {
   static const Color primaryPurple = Color(0xFF673AB7);
   static const Color backgroundColor = Color(0xFFF8F6FC);
 
-  final List<Widget> _pages = const [
+  final List<Widget> _pages = [
     HomePage(),
     MyWalletPage(),
+    const _HistoryPlaceholder(),
+    ProfilePage(),
   ];
+
 
   final List<IconData> _icons = [
     Icons.home_outlined,
@@ -203,6 +207,17 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _HistoryPlaceholder extends StatelessWidget {
+  const _HistoryPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('History'),
     );
   }
 }
