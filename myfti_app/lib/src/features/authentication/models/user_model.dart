@@ -16,13 +16,20 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    final wallet = json['wallet'] is Map
+        ? Map<String, dynamic>.from(json['wallet'])
+        : <String, dynamic>{};
+
     return UserModel(
       id: (json['id'] ?? json['user_id'] ?? '').toString(),
-      name: json['name'] ?? json['nama_lengkap'] ?? '',
-      email: json['email'] ?? '',
+      name: (json['name'] ?? json['fullName'] ?? json['nama_lengkap'] ?? '').toString(),
+      email: (json['email'] ?? '').toString(),
       nim: (json['nim'] ?? '').toString(),
-      walletId: (json['wallet_id'] ?? '').toString(),
-      balance: num.tryParse((json['balance'] ?? json['saldo'] ?? 0).toString()) ?? 0,
+      walletId: (json['wallet_id'] ?? wallet['walletId'] ?? '').toString(),
+      balance: num.tryParse(
+            (json['balance'] ?? json['saldo'] ?? wallet['balance'] ?? 0).toString(),
+          ) ??
+          0,
     );
   }
 
