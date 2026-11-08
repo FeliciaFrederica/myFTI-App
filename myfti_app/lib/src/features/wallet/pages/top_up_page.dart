@@ -18,8 +18,7 @@ class _TopUpPageState extends State<TopUpPage> {
   final WalletService _walletService = WalletService();
 
   bool _isLoading = false;
-  // menunggu token tersedia
-  final String token = 'YOUR_AUTH_TOKEN';
+  
   final List<int> _amountOptions = [
     50000,
     100000,
@@ -112,7 +111,7 @@ class _TopUpPageState extends State<TopUpPage> {
               ),
               onPressed: () {
                 Navigator.pop(dialogContext);
-                _submitTopUp(amount, token);
+                _submitTopUp(amount);
               },
               child: const Text('Konfirmasi'),
             ),
@@ -122,13 +121,13 @@ class _TopUpPageState extends State<TopUpPage> {
     );
   }
 
-  Future<void> _submitTopUp(int amount, String token) async {
+  Future<void> _submitTopUp(int amount) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final result = await _walletService.topUp(token, amount);
+      final result = await _walletService.topUp(amount);
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
