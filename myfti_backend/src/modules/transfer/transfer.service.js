@@ -2,11 +2,37 @@ const prisma = require("../../config/prisma");
 const crypto = require("crypto");
 
 const MIN_TRANSFER = 10000;
+const MAX_WALLET_BALANCE = 2147483647;
 
 const createError = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   return error;
+};
+
+// Menjalankan transaksi dengan perlindungan konflik database
+const runTransferTransaction = async (callback) => {
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await prisma.$transaction(callback, {
+        isolationLevel: "Serializable",
+      });
+    } catch (error) {
+      // Mengulang transaksi jika terjadi konflik database
+      if (error.code !== "P2034") {
+        throw error;
+      }
+
+      if (attempt === maxAttempts) {
+        throw createError(
+          "Transaksi sedang berbenturan dengan transaksi lain. Silakan coba kembali.",
+          409
+        );
+      }
+    }
+  }
 };
 
 // Mencari penerima berdasarkan Wallet ID
@@ -19,9 +45,15 @@ const getTransferRecipient = async (walletId, currentUserId) => {
     throw createError("Mohon login terlebih dahulu.", 401);
   }
 
+  const normalizedWalletId = walletId.trim();
+
+  if (!normalizedWalletId) {
+    throw createError("Wallet ID tidak valid.", 400);
+  }
+
   const recipient = await prisma.wallet.findUnique({
     where: {
-      walletId: walletId.trim(),
+      walletId: normalizedWalletId,
     },
     select: {
       walletId: true,
@@ -58,9 +90,16 @@ const transfer = async (userId, recipientWalletId, amount, description) => {
     throw createError("Wallet ID penerima tidak valid.", 400);
   }
 
-  if (!Number.isInteger(amount) || amount < MIN_TRANSFER) {
+  const normalizedWalletId = recipientWalletId.trim();
+
+  if (!normalizedWalletId) {
+    throw createError("Wallet ID penerima tidak valid.", 400);
+  }
+
+  // Memvalidasi nominal transfer
+  if (!Number.isSafeInteger(amount) || amount < MIN_TRANSFER) {
     throw createError(
-      "Minimal transfer adalah Rp 10.000.",
+      "Minimal transfer adalah Rp10.000.",
       400
     );
   }
@@ -69,10 +108,9 @@ const transfer = async (userId, recipientWalletId, amount, description) => {
     throw createError("Deskripsi transaksi tidak valid.", 400);
   }
 
-  const normalizedWalletId = recipientWalletId.trim();
   const normalizedDescription = description?.trim();
 
-  return await prisma.$transaction(async (tx) => {
+  return await runTransferTransaction(async (tx) => {
     // Mengambil data wallet pengirim
     const senderWallet = await tx.wallet.findUnique({
       where: {
@@ -101,6 +139,7 @@ const transfer = async (userId, recipientWalletId, amount, description) => {
       select: {
         walletId: true,
         userId: true,
+        balance: true,
         user: {
           select: {
             fullName: true,
@@ -116,6 +155,19 @@ const transfer = async (userId, recipientWalletId, amount, description) => {
     // Memastikan pengirim tidak transfer ke wallet sendiri
     if (senderWallet.walletId === recipientWallet.walletId) {
       throw createError("Tidak dapat transfer ke wallet sendiri.", 400);
+    }
+
+    // Memastikan saldo pengirim mencukupi
+    if (senderWallet.balance < amount) {
+      throw createError("Saldo tidak mencukupi.", 400);
+    }
+
+    // Memastikan saldo penerima tidak melebihi kapasitas database
+    if (recipientWallet.balance > MAX_WALLET_BALANCE - amount) {
+      throw createError(
+        "Saldo penerima telah mencapai batas maksimum.",
+        400
+      );
     }
 
     // Mengurangi saldo pengirim hanya jika saldo mencukupi
