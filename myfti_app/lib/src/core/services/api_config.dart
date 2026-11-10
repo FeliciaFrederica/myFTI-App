@@ -1,29 +1,15 @@
-import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ApiConfig {
-  ApiConfig._();
-
-  // sesuai dengan backend yang digunakan
-  static const String _port = '3000'; 
-  static const String _prefix = '/api'; 
-  static const String _lanIp = '10.17.226.24'; // sesuai dengan IP address laptop
-  static const bool _useRealDevice = true; // true karena pakai real device, false jika pakai emulator / simulator
-
-  // flutter run --dart-define=API_BASE_URL=https://api-kamu.com/api
   static const String _override = String.fromEnvironment('API_BASE_URL');
 
   static String get baseUrl {
     if (_override.isNotEmpty) return _override;
-
-    final String host;
-    if (kIsWeb) {
-      host = 'localhost'; // Chrome
-    } else if (defaultTargetPlatform == TargetPlatform.android) {
-      host = _useRealDevice ? _lanIp : '10.0.2.2'; // emulator Android
-    } else {
-      host = _useRealDevice ? _lanIp : 'localhost'; // iOS simulator / desktop
-    }
-
-    return 'http://$host:$_port$_prefix';
+    if (kIsWeb) return 'http://localhost:3000/api';
+    if (Platform.isAndroid) return 'http://10.0.2.2:3000/api'; // emulator Android
+    return 'http://localhost:3000/api'; // iOS simulator / desktop
   }
+
+  static const Duration timeout = Duration(seconds: 10);
 }
