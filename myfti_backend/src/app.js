@@ -3,10 +3,10 @@ const express = require("express");
 const walletRoutes = require("./modules/wallet/wallet.routes");
 const transferRoutes = require("./modules/transfer/transfer.routes");
 const withdrawRoutes = require("./modules/withdraw/withdraw.routes");
+const recipientRoutes = require("./modules/transfer/recipient.routes");
 
 const app = express();
 
-// Middleware untuk membaca JSON request
 app.use(express.json());
 
 // Welcome API
@@ -24,5 +24,8 @@ app.use("/api/transfers", transferRoutes);
 
 // Withdraw
 app.use("/api/withdrawals", withdrawRoutes);
+
+// Transfer Recipient
+app.use("/api/users/recipient", recipientRoutes);
 
 module.exports = app;
