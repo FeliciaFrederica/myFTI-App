@@ -16,6 +16,31 @@ const createError = (message, statusCode) => {
   return error;
 };
 
+// Menjalankan transaksi dengan perlindungan konflik database
+const runWithdrawTransaction = async (callback) => {
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await prisma.$transaction(callback, {
+        isolationLevel: "Serializable",
+      });
+    } catch (error) {
+      // Mengulang transaksi jika terjadi konflik database
+      if (error.code !== "P2034") {
+        throw error;
+      }
+
+      if (attempt === maxAttempts) {
+        throw createError(
+          "Transaksi sedang berbenturan dengan transaksi lain. Silakan coba kembali.",
+          409
+        );
+      }
+    }
+  }
+};
+
 // Memvalidasi bank tujuan
 const validateBank = (bankCode) => {
   if (typeof bankCode !== "string") {
@@ -51,7 +76,7 @@ const withdraw = async (
   }
 
   // Validasi nominal withdraw
-  if (!Number.isInteger(amount) || amount < MIN_WITHDRAW) {
+  if (!Number.isSafeInteger(amount) || amount < MIN_WITHDRAW) {
     throw createError(
       "Minimal withdraw adalah Rp 10.000.",
       400
@@ -99,7 +124,7 @@ const withdraw = async (
     };
   }
 
-  return await prisma.$transaction(async (tx) => {
+  return await runWithdrawTransaction(async (tx) => {
     // Memeriksa wallet pengguna
     const wallet = await tx.wallet.findUnique({
       where: { userId },
@@ -224,7 +249,6 @@ const withdraw = async (
     };
   });
 };
-
 
 // Mengambil daftar rekening bank yang tersimpan
 const getSavedBankAccounts = async (userId) => {
