@@ -225,6 +225,32 @@ const withdraw = async (
   });
 };
 
+
+// Mengambil daftar rekening bank yang tersimpan
+const getSavedBankAccounts = async (userId) => {
+  if (!userId) {
+    throw createError("Mohon login terlebih dahulu.", 401);
+  }
+
+  const accounts = await prisma.bankAccount.findMany({
+    where: {
+      userId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      id: true,
+      bankCode: true,
+      accountNumber: true,
+      createdAt: true,
+    },
+  });
+
+  return accounts;
+};
+
 module.exports = {
   withdraw,
+  getSavedBankAccounts,
 };
