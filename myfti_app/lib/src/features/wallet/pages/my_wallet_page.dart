@@ -17,9 +17,6 @@ class _MyWalletPageState extends State<MyWalletPage> {
 
   final WalletService _walletService = WalletService();
 
-  // menunggu token auth
-  final String token = 'YOUR_AUTH_TOKEN';
-
   late Future<Map<String, dynamic>> _walletFuture;
 
   @override
@@ -29,7 +26,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
   }
 
   void _loadWallet() {
-    _walletFuture = _walletService.getWallet(token);
+    _walletFuture = _walletService.getWallet();
   }
 
   String _formatRupiah(int amount) {
