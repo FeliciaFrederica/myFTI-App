@@ -21,10 +21,9 @@ const getTransferRecipient = async (req, res) => {
 
     return res.status(error.statusCode || 500).json({
       success: false,
-      message:
-        error.statusCode
-          ? error.message
-          : "Gagal mencari data penerima.",
+      message: error.statusCode
+        ? error.message
+        : "Gagal mencari data penerima.",
     });
   }
 };
@@ -33,6 +32,19 @@ const getTransferRecipient = async (req, res) => {
 const transfer = async (req, res) => {
   try {
     const userId = req.user?.id;
+
+    // Memvalidasi format data request
+    if (
+      !req.body ||
+      typeof req.body !== "object" ||
+      Array.isArray(req.body)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Data transfer tidak valid.",
+      });
+    }
+
     const { recipientWalletId, amount, description } = req.body;
 
     const result = await transferService.transfer(
@@ -52,10 +64,9 @@ const transfer = async (req, res) => {
 
     return res.status(error.statusCode || 500).json({
       success: false,
-      message:
-        error.statusCode
-          ? error.message
-          : "Gagal melakukan transfer.",
+      message: error.statusCode
+        ? error.message
+        : "Gagal melakukan transfer.",
     });
   }
 };
