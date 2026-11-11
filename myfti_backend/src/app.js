@@ -1,10 +1,8 @@
 const express = require("express");
-const cors = require("cors");
 const walletRoutes = require("./modules/wallet/wallet.routes");
 
 const app = express();
 
-app.use(cors());
 app.use(express.json());
 
 app.get("/api", (req, res) => {
@@ -14,6 +12,5 @@ app.get("/api", (req, res) => {
 });
 
 app.use("/api/wallet", walletRoutes);
-app.use("/api", require("./routes/auth.routes"));
 
 module.exports = app;
