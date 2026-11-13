@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../core/services/api_client.dart';
@@ -60,11 +62,24 @@ class AuthService {
     return body;
   }
 
-  static Future<http.Response> _guard(Future<http.Response> request) async {
+    static Future<http.Response> _guard(Future<http.Response> request) async {
     try {
       return await request.timeout(_timeout);
-    } catch (_) {
+    } on TimeoutException catch (e) {
+      debugPrint('AUTH TIMEOUT: $e');
+      throw Exception('Server tidak merespons, coba lagi');
+    } on http.ClientException catch (e) {
+      debugPrint('AUTH CLIENT ERROR: $e');
       throw Exception('Tidak dapat terhubung ke server');
+    } catch (e, st) {
+      final type = e.runtimeType.toString();
+      if (type.contains('SocketException') ||
+          type.contains('HandshakeException')) {
+        debugPrint('AUTH SOCKET ERROR: $e');
+        throw Exception('Tidak dapat terhubung ke server');
+      }
+      debugPrint('AUTH UNEXPECTED ERROR: $e\n$st');
+      throw Exception('Terjadi kesalahan: $e');
     }
   }
 
