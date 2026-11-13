@@ -1,87 +1,127 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const db = require('../config/db');
+const prisma = require('../config/prisma');
 const AppError = require('../utils/AppError');
 
-const DUMMY_HASH = bcrypt.hashSync('dummy-password', 12); // mencegah timing attack
+const signToken = (user) =>
+  jwt.sign(
+    { sub: user.id, tv: user.tokenVersion },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+  );
 
-function publicUser(row) {
-  return {
-    userId: row.id,
-    fullName: row.full_name,
-    email: row.email,
-    nim: row.nim,
-    walletId: row.wallet_id,
-    balance: row.balance,
-  };
-}
+const sanitizeUser = (user) => ({
+  id: user.id,
+  fullName: user.fullName,
+  email: user.email,
+  nim: user.nim,
+  wallet: user.wallet
+    ? { walletId: user.wallet.walletId, balance: user.wallet.balance }
+    : null,
+});
 
-function signToken(userId) {
-  return jwt.sign({}, process.env.JWT_SECRET, {
-    subject: String(userId),
-    expiresIn: process.env.JWT_EXPIRES_IN || '1d',
-    jwtid: crypto.randomUUID(),
-  });
-}
+// Contoh hasil: FTI2026048213
+const generateWalletId = () => {
+  const year = new Date().getFullYear();
+  const rand = crypto.randomInt(0, 1000000);
+  return `FTI${year}${String(rand).padStart(6, '0')}`;
+};
 
-const findFull = db.prepare(`
-  SELECT u.*, w.wallet_id, w.balance
-  FROM users u JOIN wallets w ON w.user_id = u.id
-  WHERE u.id = ?`);
-
-exports.register = async ({ fullName, nim, email, password }) => {
+async function register({ fullName, nim, email, password }) {
   email = email.trim().toLowerCase();
+  nim = nim.trim();
+  fullName = fullName.trim();
 
-  const exists = db.prepare('SELECT email, nim FROM users WHERE email = ? OR nim = ?').get(email, nim);
-  if (exists) {
-    throw new AppError(exists.email === email ? 'Email sudah terdaftar' : 'NIM sudah terdaftar', 409);
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ email }, { nim }] },
+  });
+  if (existing) {
+    throw new AppError(
+      existing.email === email ? 'Email sudah terdaftar' : 'NIM sudah terdaftar',
+      409
+    );
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  const create = db.transaction(() => {
-    const { lastInsertRowid } = db
-      .prepare('INSERT INTO users (full_name, email, nim, password_hash) VALUES (?,?,?,?)')
-      .run(fullName.trim(), email, nim, passwordHash);
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      const user = await prisma.$transaction(async (tx) => {
+        const created = await tx.user.create({
+          data: { fullName, nim, email, passwordHash },
+        });
+        const wallet = await tx.wallet.create({
+          data: { walletId: generateWalletId(), userId: created.id, balance: 0 },
+        });
+        return { ...created, wallet };
+      });
 
-    const walletId = `FTI${new Date().getFullYear()}${String(lastInsertRowid).padStart(4, '0')}`;
-    db.prepare('INSERT INTO wallets (user_id, wallet_id, balance) VALUES (?,?,0)')
-      .run(lastInsertRowid, walletId);
-    return lastInsertRowid;
+      return { token: signToken(user), user: sanitizeUser(user) };
+    } catch (err) {
+      if (err.code === 'P2002') {
+        // Unique constraint: cek apakah karena email/NIM
+        const dup = await prisma.user.findFirst({
+          where: { OR: [{ email }, { nim }] },
+        });
+        if (dup) {
+          throw new AppError(
+            dup.email === email ? 'Email sudah terdaftar' : 'NIM sudah terdaftar',
+            409
+          );
+        }
+        if (attempt < 5) continue;
+      }
+      throw err;
+    }
+  }
+}
+
+async function login({ email, password }) {
+  const user = await prisma.user.findUnique({
+    where: { email: email.trim().toLowerCase() },
+    include: { wallet: true },
   });
 
-  const userId = create();
-  return { token: signToken(userId), user: publicUser(findFull.get(userId)) };
-};
+  const invalid = new AppError('Email atau password salah', 401);
+  if (!user) throw invalid;
 
-exports.login = async ({ email, password }) => {
-  email = email.trim().toLowerCase();
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  const match = await bcrypt.compare(password, user.passwordHash);
+  if (!match) throw invalid;
 
-  const ok = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
-  if (!user || !ok) throw new AppError('Email atau password salah', 401);
+  return { token: signToken(user), user: sanitizeUser(user) };
+}
 
-  return { token: signToken(user.id), user: publicUser(findFull.get(user.id)) };
-};
+async function logout(userId) {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { tokenVersion: { increment: 1 } },
+  });
+}
 
-exports.logout = ({ jti, exp }) => {
-  db.prepare('INSERT OR IGNORE INTO revoked_tokens (jti, expires_at) VALUES (?,?)').run(jti, exp);
-};
+async function getProfile(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { wallet: true },
+  });
+  if (!user) throw new AppError('User tidak ditemukan', 404);
+  return sanitizeUser(user);
+}
 
-exports.getProfile = (userId) => publicUser(findFull.get(userId));
-
-exports.updateProfile = (userId, { fullName, email }) => {
-  const current = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
-  const newEmail = email ? email.trim().toLowerCase() : current.email;
-
-  if (newEmail !== current.email) {
-    const taken = db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(newEmail, userId);
-    if (taken) throw new AppError('Email sudah dipakai pengguna lain', 409);
+async function updateProfile(userId, { fullName, email }) {
+  if (email) {
+    email = email.trim().toLowerCase();
+    const taken = await prisma.user.findFirst({
+      where: { email, NOT: { id: userId } },
+    });
+    if (taken) throw new AppError('Email sudah dipakai', 409);
   }
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { fullName, ...(email ? { email } : {}) },
+    include: { wallet: true },
+  });
+  return sanitizeUser(user);
+}
 
-  db.prepare(`UPDATE users SET full_name = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
-    .run((fullName || current.full_name).trim(), newEmail, userId);
-
-  return publicUser(findFull.get(userId));
-};
+module.exports = { register, login, logout, getProfile, updateProfile };

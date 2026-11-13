@@ -70,9 +70,18 @@ class AuthService {
     } on TimeoutException catch (e) {
       debugPrint('AUTH TIMEOUT: $e');
       throw Exception('Server tidak merespons, coba lagi');
-    } catch (e) {
-      debugPrint('AUTH CONNECTION ERROR: $e');
+    } on http.ClientException catch (e) {
+      debugPrint('AUTH CLIENT ERROR: $e');
       throw Exception('Tidak dapat terhubung ke server');
+    } catch (e, st) {
+      final type = e.runtimeType.toString();
+      if (type.contains('SocketException') ||
+          type.contains('HandshakeException')) {
+        debugPrint('AUTH SOCKET ERROR: $e');
+        throw Exception('Tidak dapat terhubung ke server');
+      }
+      debugPrint('AUTH UNEXPECTED ERROR: $e\n$st');
+      throw Exception('Terjadi kesalahan: $e');
     }
   }
 

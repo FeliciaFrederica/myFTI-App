@@ -1,5 +1,5 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NIM_RE = /^(535|825)\d{6}$/; // sesuaikan jumlah digit NIM
+const NIM_RE = /^(535|825)\d{6}$/; 
 
 function validateRegister({ fullName, nim, email, password }) {
   const errors = [];
