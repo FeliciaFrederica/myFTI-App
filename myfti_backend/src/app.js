@@ -29,6 +29,7 @@ app.use((req, res, next) => {
   console.log(`${req.method} ${req.originalUrl}`);
   next();
 });
+app.use(express.json());
 
 app.get("/api", (req, res) => {
   res.json({ success: true, message: "Welcome to myFTI API!" });
@@ -52,5 +53,6 @@ app.use((req, res) => {
 });
 
 app.use(errorHandler);
+app.use("/api/wallet", walletRoutes);
 
 module.exports = app;

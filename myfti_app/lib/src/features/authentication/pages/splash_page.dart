@@ -24,12 +24,6 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    precacheImage(const AssetImage('assets/images/logo_myfti.png'), context);
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
@@ -45,16 +39,15 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: const [
                   BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 20,
-                    offset: Offset(0, 8),
-                  ),
+                      color: Colors.black26,
+                      blurRadius: 20,
+                      offset: Offset(0, 8)),
                 ],
               ),
               child: ClipRRect(
@@ -73,20 +66,15 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'myFTI',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 34,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
+            const Text('myFTI',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1)),
             const SizedBox(height: 6),
-            const Text(
-              'Digital Wallet untuk Mahasiswa FTI',
-              style: TextStyle(color: Colors.white70),
-            ),
+            const Text('Digital Wallet untuk Mahasiswa FTI',
+                style: TextStyle(color: Colors.white70)),
             const SizedBox(height: 40),
             const CircularProgressIndicator(color: Colors.white),
           ],
