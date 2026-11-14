@@ -1,35 +1,29 @@
-const service = require('../services/auth.service');
-const AppError = require('../utils/AppError');
-const { validateRegister, validateLogin } = require('../utils/validators');
+const authService = require('../services/auth.service');
 
-const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+const wrap = (fn) => (req, res, next) =>
+  Promise.resolve(fn(req, res, next)).catch(next);
 
 exports.register = wrap(async (req, res) => {
-  const errors = validateRegister(req.body);
-  if (errors.length) throw new AppError(errors.join(', '), 422);
-  const data = await service.register(req.body);
+  const data = await authService.register(req.body);
   res.status(201).json({ success: true, message: 'Registrasi berhasil', data });
 });
 
 exports.login = wrap(async (req, res) => {
-  const errors = validateLogin(req.body);
-  if (errors.length) throw new AppError(errors.join(', '), 422);
-  const data = await service.login(req.body);
+  const data = await authService.login(req.body);
   res.json({ success: true, message: 'Login berhasil', data });
 });
 
 exports.logout = wrap(async (req, res) => {
-  service.logout(req.user);
+  await authService.logout(req.user.id);
   res.json({ success: true, message: 'Logout berhasil' });
 });
 
 exports.getProfile = wrap(async (req, res) => {
-  res.json({ success: true, data: service.getProfile(req.user.id) });
+  const data = await authService.getProfile(req.user.id);
+  res.json({ success: true, data });
 });
 
 exports.updateProfile = wrap(async (req, res) => {
-  const { fullName, email } = req.body;
-  if (fullName !== undefined && fullName.trim().length < 3) throw new AppError('Nama minimal 3 karakter', 422);
-  const data = service.updateProfile(req.user.id, { fullName, email });
+  const data = await authService.updateProfile(req.user.id, req.body);
   res.json({ success: true, message: 'Profil diperbarui', data });
 });

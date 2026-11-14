@@ -2,15 +2,23 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "myFTI - Emulator",
+      "name": "myFTI - Chrome",
       "request": "launch",
-      "type": "dart"
+      "type": "dart",
+      "deviceId": "chrome",
+      "args": ["--dart-define=API_BASE_URL=http://localhost:3000/api"]
+    },
+    {
+      "name": "myFTI - Android Emulator",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--dart-define=API_BASE_URL=http://10.0.2.2:3000/api"]
     },
     {
       "name": "myFTI - HP Asli",
       "request": "launch",
       "type": "dart",
-      "args": ["--dart-define=API_BASE_URL=http://192.168.1.10:3000/api"]
+      "args": ["--dart-define=API_BASE_URL=http://10.17.226.24:3000/api"] // Pakai IP Address laptop kalian
     }
   ]
 }
