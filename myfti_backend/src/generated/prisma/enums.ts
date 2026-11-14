@@ -34,3 +34,14 @@ export const UserRole = {
 } as const
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
+
+
+export const MerchantCategory = {
+  ALLEYWAY: 'ALLEYWAY',
+  PRINT: 'PRINT',
+  KANTIN: 'KANTIN',
+  JUKEL_PO: 'JUKEL_PO',
+  AKADEMIK: 'AKADEMIK'
+} as const
+
+export type MerchantCategory = (typeof MerchantCategory)[keyof typeof MerchantCategory]

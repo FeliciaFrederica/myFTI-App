@@ -51,6 +51,13 @@ export type EnumUserRoleFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumUserRoleFilter<$PrismaModel> | $Enums.UserRole
 }
 
+export type EnumMerchantCategoryNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.MerchantCategory | Prisma.EnumMerchantCategoryFieldRefInput<$PrismaModel> | null
+  in?: $Enums.MerchantCategory[] | Prisma.ListEnumMerchantCategoryFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.MerchantCategory[] | Prisma.ListEnumMerchantCategoryFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumMerchantCategoryNullableFilter<$PrismaModel> | $Enums.MerchantCategory | null
+}
+
 export type DateTimeFilter<$PrismaModel = never> = {
   equals?: Date | string | Prisma.DateTimeFieldRefInput<$PrismaModel>
   in?: Date[] | string[] | Prisma.ListDateTimeFieldRefInput<$PrismaModel>
@@ -122,6 +129,16 @@ export type EnumUserRoleWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumUserRoleFilter<$PrismaModel>
   _max?: Prisma.NestedEnumUserRoleFilter<$PrismaModel>
+}
+
+export type EnumMerchantCategoryNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.MerchantCategory | Prisma.EnumMerchantCategoryFieldRefInput<$PrismaModel> | null
+  in?: $Enums.MerchantCategory[] | Prisma.ListEnumMerchantCategoryFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.MerchantCategory[] | Prisma.ListEnumMerchantCategoryFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumMerchantCategoryNullableWithAggregatesFilter<$PrismaModel> | $Enums.MerchantCategory | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumMerchantCategoryNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumMerchantCategoryNullableFilter<$PrismaModel>
 }
 
 export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
@@ -236,6 +253,13 @@ export type NestedEnumUserRoleFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumUserRoleFilter<$PrismaModel> | $Enums.UserRole
 }
 
+export type NestedEnumMerchantCategoryNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.MerchantCategory | Prisma.EnumMerchantCategoryFieldRefInput<$PrismaModel> | null
+  in?: $Enums.MerchantCategory[] | Prisma.ListEnumMerchantCategoryFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.MerchantCategory[] | Prisma.ListEnumMerchantCategoryFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumMerchantCategoryNullableFilter<$PrismaModel> | $Enums.MerchantCategory | null
+}
+
 export type NestedDateTimeFilter<$PrismaModel = never> = {
   equals?: Date | string | Prisma.DateTimeFieldRefInput<$PrismaModel>
   in?: Date[] | string[] | Prisma.ListDateTimeFieldRefInput<$PrismaModel>
@@ -311,6 +335,16 @@ export type NestedEnumUserRoleWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumUserRoleFilter<$PrismaModel>
   _max?: Prisma.NestedEnumUserRoleFilter<$PrismaModel>
+}
+
+export type NestedEnumMerchantCategoryNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.MerchantCategory | Prisma.EnumMerchantCategoryFieldRefInput<$PrismaModel> | null
+  in?: $Enums.MerchantCategory[] | Prisma.ListEnumMerchantCategoryFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.MerchantCategory[] | Prisma.ListEnumMerchantCategoryFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumMerchantCategoryNullableWithAggregatesFilter<$PrismaModel> | $Enums.MerchantCategory | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumMerchantCategoryNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumMerchantCategoryNullableFilter<$PrismaModel>
 }
 
 export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {

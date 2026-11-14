@@ -81,6 +81,7 @@ export const UserScalarFieldEnum = {
   nim: 'nim',
   passwordHash: 'passwordHash',
   role: 'role',
+  merchantCategory: 'merchantCategory',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   tokenVersion: 'tokenVersion'
