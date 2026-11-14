@@ -15,14 +15,22 @@ class MainNavigation extends StatefulWidget {
 }
 
 class _MainNavigationState extends State<MainNavigation> {
+  void _switchTab(int index) {
+    if (index >= 0 && index < _pages.length) {
+      setState(() {
+        _currentIndex = index;
+      });
+    }
+  }
+
   int _currentIndex = 0;
 
   static const Color primaryPurple = Color(0xFF673AB7);
   static const Color backgroundColor = Color(0xFFF8F6FC);
 
-  final List<Widget> _pages = [
+  late final List<Widget> _pages = [
     HomePage(),
-    MyWalletPage(),
+    MyWalletPage(onHistoryTap: () => _switchTab(2)),
     TransactionHistoryPage(),
     ProfilePage(),
   ];

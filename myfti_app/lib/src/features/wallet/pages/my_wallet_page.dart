@@ -1,10 +1,12 @@
-
 import 'package:flutter/material.dart';
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
+
 import 'top_up_page.dart';
 
 class MyWalletPage extends StatefulWidget {
-  const MyWalletPage({super.key});
+  final VoidCallback? onHistoryTap;
+
+  const MyWalletPage({super.key, this.onHistoryTap});
 
   @override
   State<MyWalletPage> createState() => _MyWalletPageState();
@@ -45,10 +47,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
       appBar: AppBar(
         title: const Text(
           'My Wallet',
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         backgroundColor: backgroundColor,
         elevation: 0,
@@ -59,9 +58,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(
-                color: primaryPurple,
-              ),
+              child: CircularProgressIndicator(color: primaryPurple),
             );
           }
 
@@ -70,11 +67,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    color: Colors.red,
-                    size: 40,
-                  ),
+                  const Icon(Icons.error_outline, color: Colors.red, size: 40),
                   const SizedBox(height: 12),
                   const Text('Gagal mengambil data wallet.'),
                   const SizedBox(height: 12),
@@ -106,10 +99,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF673AB7),
-                        Color(0xFF9575CD),
-                      ],
+                      colors: [Color(0xFF673AB7), Color(0xFF9575CD)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -126,10 +116,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
                       const SizedBox(height: 20),
                       const Text(
                         'Available Balance',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -143,10 +130,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
                       const SizedBox(height: 20),
                       const Text(
                         'myFTI Digital Wallet',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.white, fontSize: 14),
                       ),
                     ],
                   ),
@@ -176,21 +160,13 @@ class _MyWalletPageState extends State<MyWalletPage> {
                         title: 'Wallet ID',
                         subtitle: walletId,
                       ),
-                      const Divider(
-                        height: 1,
-                        indent: 16,
-                        endIndent: 16,
-                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
                       _buildInfoTile(
                         icon: Icons.verified_user_outlined,
                         title: 'Wallet Status',
                         subtitle: 'Active',
                       ),
-                      const Divider(
-                        height: 1,
-                        indent: 16,
-                        endIndent: 16,
-                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
                       _buildInfoTile(
                         icon: Icons.account_balance_outlined,
                         title: 'Account Type',
@@ -239,15 +215,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
                       child: _buildActionButton(
                         icon: Icons.receipt_long_outlined,
                         label: 'History',
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Halaman Transaction History akan segera tersedia.',
-                              ),
-                            ),
-                          );
-                        },
+                        onTap: widget.onHistoryTap ?? () {},
                       ),
                     ),
                   ],
@@ -276,10 +244,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
       ),
       title: Text(
         title,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          color: textColor,
-        ),
+        style: const TextStyle(fontWeight: FontWeight.w600, color: textColor),
       ),
       subtitle: Text(subtitle),
     );
@@ -296,9 +261,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
         foregroundColor: primaryPurple,
         side: const BorderSide(color: primaryPurple),
         padding: const EdgeInsets.symmetric(vertical: 18),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       child: Column(
         children: [
