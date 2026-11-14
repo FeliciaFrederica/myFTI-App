@@ -6,7 +6,8 @@
   "scripts": {
     "start": "tsx src/server.js",
     "dev": "tsx watch src/server.js",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "seed:merchant": "tsx prisma/seed-merchant.js"
   },
   "keywords": [],
   "author": "",
