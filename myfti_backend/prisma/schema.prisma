@@ -26,6 +26,7 @@ model User {
   email        String   @unique
   nim          String   @unique
   passwordHash String
+  role         UserRole @default(STUDENT)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   tokenVersion Int      @default(0)
@@ -34,6 +35,11 @@ model User {
   transactions  Transaction[]
   bankAccounts  BankAccount[]
   notifications Notification[]
+}
+
+enum UserRole {
+  STUDENT
+  MERCHANT
 }
 
 model Wallet {
