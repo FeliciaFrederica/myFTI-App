@@ -2,75 +2,57 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../models/transaction_model.dart';
+import '../services/transaction_service.dart';
 
-enum SortOption {
-  newest,
-  oldest,
-}
+enum SortOption { newest, oldest }
 
 class TransactionHistoryPage extends StatefulWidget {
   const TransactionHistoryPage({super.key});
 
   @override
-  State<TransactionHistoryPage> createState() =>
-      _TransactionHistoryPageState();
+  State<TransactionHistoryPage> createState() => _TransactionHistoryPageState();
 }
 
-class _TransactionHistoryPageState
-    extends State<TransactionHistoryPage> {
+class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
   SortOption _sortOption = SortOption.newest;
 
-  // Temporary mock data
-  // Nanti akan diganti dengan data dari GET /transactions
-  final List<TransactionModel> _transactions = [
-    TransactionModel(
-      id: '1',
-      reference: 'TOPUP-001',
-      type: 'TOP_UP',
-      status: 'SUCCESS',
-      amount: 200000,
-      description: 'Top Up saldo myFTI',
-      createdAt: DateTime(2026, 11, 11, 10, 30),
-    ),
-    TransactionModel(
-      id: '2',
-      reference: 'PAY-001',
-      type: 'PAYMENT',
-      status: 'SUCCESS',
-      amount: 50000,
-      description: 'Pembayaran Kantin FTI',
-      createdAt: DateTime(2026, 11, 10, 14, 20),
-    ),
-    TransactionModel(
-      id: '3',
-      reference: 'TRF-001',
-      type: 'TRANSFER_OUT',
-      status: 'SUCCESS',
-      amount: 100000,
-      description: 'Transfer ke teman',
-      counterpartName: 'Jonathan',
-      createdAt: DateTime(2026, 11, 9, 9, 15),
-    ),
-    TransactionModel(
-      id: '4',
-      reference: 'TRF-002',
-      type: 'TRANSFER_IN',
-      status: 'SUCCESS',
-      amount: 75000,
-      description: 'Transfer diterima',
-      counterpartName: 'Michelle',
-      createdAt: DateTime(2026, 11, 8, 16, 45),
-    ),
-    TransactionModel(
-      id: '5',
-      reference: 'WD-001',
-      type: 'WITHDRAW',
-      status: 'FAILED',
-      amount: 50000,
-      description: 'Withdraw ke rekening bank',
-      createdAt: DateTime(2026, 11, 7, 11, 0),
-    ),
-  ];
+  final TransactionService _transactionService = TransactionService();
+
+  List<TransactionModel> _transactions = [];
+
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+  }
+
+  Future<void> _loadTransactions() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final transactions = await _transactionService.getTransactions();
+
+      if (!mounted) return;
+
+      setState(() {
+        _transactions = transactions;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = error.toString().replaceFirst('Exception: ', '');
+        _isLoading = false;
+      });
+    }
+  }
 
   List<TransactionModel> _getTransactions(String category) {
     List<TransactionModel> result = List.from(_transactions);
@@ -102,7 +84,18 @@ class _TransactionHistoryPageState
 
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
 
     return '${date.day} ${months[date.month - 1]} ${date.year}';
@@ -156,11 +149,7 @@ class _TransactionHistoryPageState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.receipt_long_outlined,
-              size: 55,
-              color: Colors.grey,
-            ),
+            Icon(Icons.receipt_long_outlined, size: 55, color: Colors.grey),
             SizedBox(height: 12),
             Text(
               'No transactions found',
@@ -173,10 +162,7 @@ class _TransactionHistoryPageState
             SizedBox(height: 5),
             Text(
               'Your transactions will appear here.',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),
@@ -186,8 +172,7 @@ class _TransactionHistoryPageState
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 110),
       itemCount: transactions.length,
-      separatorBuilder: (context, index) =>
-          const SizedBox(height: 12),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         return _buildTransactionCard(transactions[index]);
       },
@@ -201,8 +186,8 @@ class _TransactionHistoryPageState
     final Color transactionColor = isFailed
         ? Colors.grey
         : isIncoming
-            ? AppColors.success
-            : AppColors.error;
+        ? AppColors.success
+        : AppColors.error;
 
     final String sign = isIncoming ? '+' : '-';
 
@@ -211,9 +196,7 @@ class _TransactionHistoryPageState
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: AppColors.card.withValues(alpha: 0.7),
-        ),
+        border: Border.all(color: AppColors.card.withValues(alpha: 0.7)),
       ),
       child: Row(
         children: [
@@ -254,20 +237,14 @@ class _TransactionHistoryPageState
                       'myFTI Transaction',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
                 ),
 
                 const SizedBox(height: 5),
 
                 Text(
                   '${_formatDate(transaction.createdAt)} • ${_formatTime(transaction.createdAt)}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
                 ),
               ],
             ),
@@ -294,9 +271,7 @@ class _TransactionHistoryPageState
                 style: TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.w600,
-                  color: isFailed
-                      ? AppColors.error
-                      : AppColors.success,
+                  color: isFailed ? AppColors.error : AppColors.success,
                 ),
               ),
             ],
@@ -354,10 +329,7 @@ class _TransactionHistoryPageState
             unselectedLabelColor: Colors.grey,
             indicatorColor: AppColors.primary,
             indicatorWeight: 3,
-            labelStyle: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
+            labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             tabs: [
               Tab(text: 'All'),
               Tab(text: 'Incoming'),
@@ -365,7 +337,32 @@ class _TransactionHistoryPageState
             ],
           ),
         ),
-        body: TabBarView(
+        body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+          ? Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(_errorMessage!, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadTransactions,
+                    child: const Text('Try Again'),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : TabBarView(
           children: [
             _buildTransactionList('all'),
             _buildTransactionList('incoming'),

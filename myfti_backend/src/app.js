@@ -4,6 +4,7 @@ const helmet = require("helmet");
 
 const walletRoutes = require("./modules/wallet/wallet.routes");
 const authRoutes = require("./routes/auth.routes");
+const transactionRoutes = require("./modules/transaction/transaction.routes");
 const authMiddleware = require("./middlewares/auth.middleware");
 const errorHandler = require("./middlewares/error.middleware");
 
@@ -42,6 +43,9 @@ app.use("/api/auth", authRoutes);
 // wallet dilindungi token; hapus authMiddleware di sini jika
 // wallet.routes.js sudah memasangnya sendiri
 app.use("/api/wallet", authMiddleware, walletRoutes);
+
+// transactions
+app.use("/api/transactions", transactionRoutes);
 
 // 404 untuk endpoint yang tidak ada
 app.use((req, res) => {
