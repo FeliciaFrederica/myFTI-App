@@ -151,7 +151,7 @@ class AuthService {
 
   // Ambil data profil user yang sedang login dari server.
   static Future<UserModel> getProfile() async {
-    final res = await _guard(_send('GET', '/profile', auth: true));
+    final res = await _guard(_send('GET', '/auth/profile', auth: true));
     final body = _decode(res);
 
     if (res.statusCode == 401) {
@@ -175,7 +175,7 @@ class AuthService {
     final res = await _guard(
       _send(
         'PUT',
-        '/profile',
+        '/auth/profile',
         body: {'name': name, 'email': email},
         auth: true,
       ),
