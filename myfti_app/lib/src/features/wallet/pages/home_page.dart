@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import 'top_up_page.dart';
+import '../../payment/pages/payment_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -23,10 +25,7 @@ class HomePage extends StatelessWidget {
                 children: [
                   const CircleAvatar(
                     backgroundColor: Color(0xFFEDE7F6),
-                    child: Icon(
-                      Icons.person,
-                      color: primaryPurple,
-                    ),
+                    child: Icon(Icons.person, color: primaryPurple),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -138,7 +137,12 @@ class HomePage extends StatelessWidget {
                   _buildAction(
                     icon: Icons.payment_outlined,
                     label: 'Payment',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const PaymentPage()),
+                      );
+                    },
                   ),
                   _buildAction(
                     icon: Icons.account_balance_outlined,
@@ -219,20 +223,10 @@ class HomePage extends StatelessWidget {
                 color: const Color(0xFFEDE7F6),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                icon,
-                color: primaryPurple,
-                size: 26,
-              ),
+              child: Icon(icon, color: primaryPurple, size: 26),
             ),
             const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                color: textColor,
-              ),
-            ),
+            Text(label, style: const TextStyle(fontSize: 12, color: textColor)),
           ],
         ),
       ),
@@ -254,17 +248,11 @@ class HomePage extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: const Color(0xFFEDE7F6),
-          child: Icon(
-            icon,
-            color: primaryPurple,
-          ),
+          child: Icon(icon, color: primaryPurple),
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            color: textColor,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w600, color: textColor),
         ),
         subtitle: Text(date),
         trailing: Text(
