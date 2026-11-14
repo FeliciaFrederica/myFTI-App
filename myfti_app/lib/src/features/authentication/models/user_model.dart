@@ -5,6 +5,7 @@ class UserModel {
   final String nim;
   final String walletId;
   final num balance;
+  final String role;
 
   UserModel({
     required this.id,
@@ -13,6 +14,7 @@ class UserModel {
     required this.nim,
     required this.walletId,
     required this.balance,
+    required this.role,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -22,25 +24,30 @@ class UserModel {
 
     return UserModel(
       id: (json['id'] ?? json['user_id'] ?? '').toString(),
-      name: (json['name'] ?? json['fullName'] ?? json['nama_lengkap'] ?? '').toString(),
+      name: (json['name'] ?? json['fullName'] ?? json['nama_lengkap'] ?? '')
+          .toString(),
       email: (json['email'] ?? '').toString(),
       nim: (json['nim'] ?? '').toString(),
       walletId: (json['wallet_id'] ?? wallet['walletId'] ?? '').toString(),
-      balance: num.tryParse(
-            (json['balance'] ?? json['saldo'] ?? wallet['balance'] ?? 0).toString(),
+      balance:
+          num.tryParse(
+            (json['balance'] ?? json['saldo'] ?? wallet['balance'] ?? 0)
+                .toString(),
           ) ??
           0,
+      role: (json['role'] ?? 'STUDENT').toString(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'email': email,
-        'nim': nim,
-        'wallet_id': walletId,
-        'balance': balance,
-      };
+    'id': id,
+    'name': name,
+    'email': email,
+    'nim': nim,
+    'wallet_id': walletId,
+    'balance': balance,
+    'role': role,
+  };
 
   /// Inisial untuk CircleAvatar, contoh "Budi Santoso" -> "BS"
   String get initials {
