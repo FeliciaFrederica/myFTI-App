@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'dart:async';
+
 import '../../../core/theme/app_theme.dart';
 import '../models/transaction_model.dart';
 import '../services/transaction_service.dart';
@@ -13,7 +15,10 @@ class TransactionHistoryPage extends StatefulWidget {
   State<TransactionHistoryPage> createState() => _TransactionHistoryPageState();
 }
 
-class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
+class _TransactionHistoryPageState extends State<TransactionHistoryPage>
+    with WidgetsBindingObserver {
+  Timer? _refreshTimer;
+  bool _isRefreshing = false;
   SortOption _sortOption = SortOption.newest;
 
   final TransactionService _transactionService = TransactionService();
@@ -26,7 +31,9 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadTransactions();
+    _startAutoRefresh();
   }
 
   Future<void> _loadTransactions() async {
@@ -52,6 +59,62 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
         _isLoading = false;
       });
     }
+  }
+
+  void _startAutoRefresh() {
+    _refreshTimer?.cancel();
+
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => _refreshTransactionsSilently(),
+    );
+  }
+
+  void _stopAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshTransactionsSilently();
+      _startAutoRefresh();
+    } else {
+      _stopAutoRefresh();
+    }
+  }
+
+  Future<void> _refreshTransactionsSilently() async {
+    if (!mounted || _isRefreshing) return;
+
+    _isRefreshing = true;
+
+    try {
+      final transactions = await _transactionService.getTransactions();
+
+      if (!mounted) return;
+
+      setState(() {
+        _transactions = transactions;
+        _errorMessage = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      _isRefreshing = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopAutoRefresh();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   List<TransactionModel> _getTransactions(String category) {
@@ -338,37 +401,37 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
           ),
         ),
         body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-          ? Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+            ? const Center(child: CircularProgressIndicator())
+            : _errorMessage != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(_errorMessage!, textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadTransactions,
+                        child: const Text('Try Again'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : TabBarView(
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(_errorMessage!, textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _loadTransactions,
-                    child: const Text('Try Again'),
-                  ),
+                  _buildTransactionList('all'),
+                  _buildTransactionList('incoming'),
+                  _buildTransactionList('outgoing'),
                 ],
               ),
-            ),
-          )
-        : TabBarView(
-          children: [
-            _buildTransactionList('all'),
-            _buildTransactionList('incoming'),
-            _buildTransactionList('outgoing'),
-          ],
-        ),
       ),
     );
   }
