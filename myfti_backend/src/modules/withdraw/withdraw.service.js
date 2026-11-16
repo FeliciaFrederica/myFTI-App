@@ -41,26 +41,26 @@ const runWithdrawTransaction = async (callback) => {
   }
 };
 
-// Memvalidasi bank tujuan
+// Validasi bank tujuan
 const validateBank = (bankCode) => {
   if (typeof bankCode !== "string") {
     throw createError("Bank tujuan tidak valid.", 400);
   }
 
   const normalizedCode = bankCode.trim().toUpperCase();
-  const bankName = BANKS[normalizedCode];
 
-  if (!bankName) {
+  // Memastikan kode bank terdapat dalam daftar bank simulasi
+  if (!Object.prototype.hasOwnProperty.call(BANKS, normalizedCode)) {
     throw createError("Bank tujuan tidak tersedia.", 400);
   }
 
   return {
     bankCode: normalizedCode,
-    bankName,
+    bankName: BANKS[normalizedCode],
   };
 };
 
-// Memproses withdraw
+// Proses withdraw
 const withdraw = async (
   userId,
   {
@@ -75,10 +75,10 @@ const withdraw = async (
     throw createError("Mohon login terlebih dahulu.", 401);
   }
 
-  // Validasi nominal withdraw
+  // Memvalidasi nominal withdraw
   if (!Number.isSafeInteger(amount) || amount < MIN_WITHDRAW) {
     throw createError(
-      "Minimal withdraw adalah Rp 10.000.",
+      "Minimal withdraw adalah Rp10.000.",
       400
     );
   }
@@ -86,9 +86,11 @@ const withdraw = async (
   // Menentukan rekening tujuan
   let destination;
 
-  if (bankAccountId) {
+  // Menggunakan rekening yang sudah tersimpan
+  if (bankAccountId !== undefined) {
     if (
       typeof bankAccountId !== "string" ||
+      !bankAccountId.trim() ||
       bankCode !== undefined ||
       accountNumber !== undefined ||
       saveAccount !== false
@@ -100,9 +102,10 @@ const withdraw = async (
       bankAccountId: bankAccountId.trim(),
     };
   } else {
+    // Menggunakan rekening baru
     const bank = validateBank(bankCode);
 
-    // Validasi nomor rekening
+    // Memvalidasi nomor rekening
     if (
       typeof accountNumber !== "string" ||
       !/^\d{10,16}$/.test(accountNumber)
@@ -113,6 +116,7 @@ const withdraw = async (
       );
     }
 
+    // Memvalidasi pilihan simpan rekening
     if (typeof saveAccount !== "boolean") {
       throw createError("Pilihan simpan rekening tidak valid.", 400);
     }
@@ -127,7 +131,9 @@ const withdraw = async (
   return await runWithdrawTransaction(async (tx) => {
     // Memeriksa wallet pengguna
     const wallet = await tx.wallet.findUnique({
-      where: { userId },
+      where: {
+        userId,
+      },
       select: {
         walletId: true,
         balance: true,
@@ -156,10 +162,7 @@ const withdraw = async (
       });
 
       if (!savedAccount) {
-        throw createError(
-          "Rekening tersimpan tidak ditemukan.",
-          404
-        );
+        throw createError("Rekening tersimpan tidak ditemukan.", 404);
       }
 
       targetBank = validateBank(savedAccount.bankCode);
@@ -231,7 +234,9 @@ const withdraw = async (
 
     // Mengambil saldo terbaru
     const updatedWallet = await tx.wallet.findUnique({
-      where: { userId },
+      where: {
+        userId,
+      },
       select: {
         walletId: true,
         balance: true,
