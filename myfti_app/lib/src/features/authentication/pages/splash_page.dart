@@ -44,11 +44,26 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: const [
-                  BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8)),
+                  BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 20,
+                      offset: Offset(0, 8)),
                 ],
               ),
-              child: const Icon(Icons.account_balance_wallet_rounded,
-                  size: 64, color: AppColors.primary),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset(
+                  'assets/images/myftilogo.png',
+                  width: 96,
+                  height: 96,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    size: 64,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 20),
             const Text('myFTI',
