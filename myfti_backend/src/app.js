@@ -1,4 +1,9 @@
 const express = require("express");
+
+const walletRoutes = require("./modules/wallet/wallet.routes");
+const transferRoutes = require("./modules/transfer/transfer.routes");
+const withdrawRoutes = require("./modules/withdraw/withdraw.routes");
+const recipientRoutes = require("./modules/transfer/recipient.routes");
 const cors = require("cors");
 const helmet = require("helmet");
 
@@ -31,6 +36,7 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 
+// Welcome API
 app.get("/api", (req, res) => {
   res.json({ success: true, message: "Welcome to myFTI API!" });
 });
@@ -52,7 +58,17 @@ app.use((req, res) => {
   });
 });
 
+// Wallet
 app.use(errorHandler);
 app.use("/api/wallet", walletRoutes);
+
+// Transfer
+app.use("/api/transfers", transferRoutes);
+
+// Withdraw
+app.use("/api/withdrawals", withdrawRoutes);
+
+// Transfer Recipient
+app.use("/api/users/recipient", recipientRoutes);
 
 module.exports = app;
