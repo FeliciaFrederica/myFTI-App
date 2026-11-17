@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'top_up_page.dart';
+import '../../notification/pages/notification_page.dart';
+import '../../summary/pages/financial_summary_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -49,7 +51,14 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationPage(),
+                        ),
+                      );
+                    },
                     icon: const Icon(
                       Icons.notifications_none,
                       color: primaryPurple,
@@ -101,6 +110,10 @@ class HomePage extends StatelessWidget {
                   ],
                 ),
               ),
+
+              const SizedBox(height: 16),
+
+              _buildSummaryShortcut(context),
 
               const SizedBox(height: 28),
 
@@ -195,6 +208,64 @@ class HomePage extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // Shortcut menuju halaman rekap keuangan
+  Widget _buildSummaryShortcut(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const FinancialSummaryPage(),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEDE7F6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.insights_outlined,
+                color: primaryPurple,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Financial Summary',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Rekap pemasukan & pengeluaran',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
         ),
       ),
     );
