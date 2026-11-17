@@ -2,7 +2,7 @@ const prisma = require("../../config/prisma");
 const crypto = require("crypto");
 
 const MIN_TRANSFER = 10000;
-const MAX_WALLET_BALANCE = 2147483647;
+const MAX_WALLET_BALANCE = 2147483647; // batas maks saldo wallet ikuti kapasitas database
 
 const createError = (message, statusCode) => {
   const error = new Error(message);
@@ -70,6 +70,7 @@ const getTransferRecipient = async (walletId, currentUserId) => {
     throw createError("Wallet ID penerima tidak ditemukan.", 404);
   }
 
+  // Memastikan pengguna tidak mencari wallet miliknya sendiri
   if (recipient.userId === currentUserId) {
     throw createError("Tidak dapat transfer ke wallet sendiri.", 400);
   }
@@ -98,12 +99,10 @@ const transfer = async (userId, recipientWalletId, amount, description) => {
 
   // Memvalidasi nominal transfer
   if (!Number.isSafeInteger(amount) || amount < MIN_TRANSFER) {
-    throw createError(
-      "Minimal transfer adalah Rp10.000.",
-      400
-    );
+    throw createError("Minimal transfer adalah Rp10.000.", 400);
   }
 
+  // Memvalidasi deskripsi transaksi jika dikirimkan
   if (description !== undefined && typeof description !== "string") {
     throw createError("Deskripsi transaksi tidak valid.", 400);
   }

@@ -12,6 +12,7 @@ const withdraw = async (req, res) => {
       });
     }
 
+    // Memvalidasi format data request
     if (
       !req.body ||
       typeof req.body !== "object" ||
@@ -23,10 +24,7 @@ const withdraw = async (req, res) => {
       });
     }
 
-    const result = await withdrawService.withdraw(
-      userId,
-      req.body
-    );
+    const result = await withdrawService.withdraw(userId, req.body);
 
     return res.status(200).json({
       success: true,
@@ -38,10 +36,9 @@ const withdraw = async (req, res) => {
 
     return res.status(error.statusCode || 500).json({
       success: false,
-      message:
-        error.statusCode
-          ? error.message
-          : "Gagal melakukan withdraw.",
+      message: error.statusCode
+        ? error.message
+        : "Gagal melakukan withdraw.",
     });
   }
 };
