@@ -1,5 +1,6 @@
 const prisma = require("../../config/prisma");
 const crypto = require("crypto");
+const { notify, formatRupiah } = require("../../utils/notify");
 
 const MIN_TRANSFER = 10000;
 const MAX_WALLET_BALANCE = 2147483647; // batas maks saldo wallet ikuti kapasitas database
@@ -232,6 +233,20 @@ const transfer = async (userId, recipientWalletId, amount, description) => {
         counterpartName: senderWallet.user.fullName,
       },
     });
+
+    await notify(
+      tx,
+      userId,
+      "Transfer berhasil",
+      `Transfer ${formatRupiah(amount)} ke ${recipientWallet.user.fullName} berhasil.`
+    );
+
+    await notify(
+      tx,
+      recipientWallet.userId,
+      "Dana masuk",
+      `Kamu menerima ${formatRupiah(amount)} dari ${senderWallet.user.fullName}.`
+    );
 
     // Mengambil saldo terbaru pengirim
     const updatedWallet = await tx.wallet.findUnique({
