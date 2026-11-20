@@ -62,7 +62,7 @@ class AuthService {
     return body;
   }
 
-    static Future<http.Response> _guard(Future<http.Response> request) async {
+  static Future<http.Response> _guard(Future<http.Response> request) async {
     try {
       return await request.timeout(_timeout);
     } on TimeoutException catch (e) {
@@ -93,12 +93,18 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final res = await _guard(_send('POST', '/register', body: {
-      'name': name,
-      'nim': nim,
-      'email': email,
-      'password': password,
-    }));
+    final res = await _guard(
+      _send(
+        'POST',
+        '/auth/register',
+        body: {
+          'fullName': name,
+          'nim': nim,
+          'email': email,
+          'password': password,
+        },
+      ),
+    );
 
     final ok = res.statusCode == 200 || res.statusCode == 201;
     if (!ok) {
@@ -108,14 +114,18 @@ class AuthService {
 
   // Login, lalu simpan token JWT + data user ke SessionService.
   static Future<void> login(String email, String password) async {
-    final res = await _guard(_send('POST', '/login', body: {
-      'email': email,
-      'password': password,
-    }));
+    final res = await _guard(
+      _send(
+        'POST',
+        '/auth/login',
+        body: {'email': email, 'password': password},
+      ),
+    );
 
     final body = _decode(res);
     final data = body['data'];
-    final token = (data is Map ? data['token'] : null) ??
+    final token =
+        (data is Map ? data['token'] : null) ??
         body['token'] ??
         body['access_token'];
 
@@ -141,7 +151,7 @@ class AuthService {
 
   // Ambil data profil user yang sedang login dari server.
   static Future<UserModel> getProfile() async {
-    final res = await _guard(_send('GET', '/profile', auth: true));
+    final res = await _guard(_send('GET', '/auth/profile', auth: true));
     final body = _decode(res);
 
     if (res.statusCode == 401) {
@@ -162,8 +172,14 @@ class AuthService {
     required String name,
     required String email,
   }) async {
-    final res = await _guard(_send('PUT', '/profile',
-        body: {'name': name, 'email': email}, auth: true));
+    final res = await _guard(
+      _send(
+        'PUT',
+        '/auth/profile',
+        body: {'name': name, 'email': email},
+        auth: true,
+      ),
+    );
     final body = _decode(res);
 
     if (res.statusCode == 401) {

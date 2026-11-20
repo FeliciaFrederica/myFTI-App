@@ -3,6 +3,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 
 const authRoutes = require("./routes/auth.routes");
+const transactionRoutes = require("./modules/transaction/transaction.routes");
+const paymentRoutes = require("./modules/payment/payment.routes");
 const errorHandler = require("./middlewares/error.middleware");
 const walletRoutes = require("./modules/wallet/wallet.routes");
 const transferRoutes = require("./modules/transfer/transfer.routes");
@@ -53,6 +55,12 @@ app.get("/api/health", (req, res) => {
 // Authentication
 app.use("/api/auth", authRoutes);
 
+// Transaction
+app.use("/api/transactions", transactionRoutes);
+
+// Payment
+app.use("/api/payments", paymentRoutes);
+
 // Wallet
 app.use("/api/wallet", walletRoutes);
 
@@ -77,5 +85,6 @@ app.use((req, res) => {
 
 // Global error handler
 app.use(errorHandler);
+// app.use("/api/wallet", walletRoutes);
 
 module.exports = app;

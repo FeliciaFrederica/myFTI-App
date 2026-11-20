@@ -16,8 +16,12 @@ const sanitizeUser = (user) => ({
   fullName: user.fullName,
   email: user.email,
   nim: user.nim,
+  role: user.role,
   wallet: user.wallet
-    ? { walletId: user.wallet.walletId, balance: user.wallet.balance }
+    ? {
+      walletId: user.wallet.walletId,
+      balance: user.wallet.balance
+    }
     : null,
 });
 
@@ -49,7 +53,13 @@ async function register({ fullName, nim, email, password }) {
     try {
       const user = await prisma.$transaction(async (tx) => {
         const created = await tx.user.create({
-          data: { fullName, nim, email, passwordHash },
+          data: {
+            fullName,
+            nim,
+            email,
+            passwordHash,
+            role: 'STUDENT',
+          },
         });
         const wallet = await tx.wallet.create({
           data: { walletId: generateWalletId(), userId: created.id, balance: 0 },
