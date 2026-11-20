@@ -15,7 +15,11 @@ module.exports = async function authMiddleware(req, res, next) {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, tokenVersion: true },
+      select: {
+        id: true,
+        tokenVersion: true,
+        role: true
+      },
     });
 
     // token invalid jika user hilang atau sudah logout
@@ -25,7 +29,10 @@ module.exports = async function authMiddleware(req, res, next) {
         .json({ success: false, message: 'Sesi tidak valid, silakan login ulang' });
     }
 
-    req.user = { id: user.id };
+    req.user = {
+      id: user.id,
+      role: user.role,
+    };
     next();
   } catch (err) {
     return res

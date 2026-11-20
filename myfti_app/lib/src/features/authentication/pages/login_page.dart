@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../widgets/auth_field.dart';
+import '../models/user_model.dart';
+import '../../../core/services/session_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,12 +32,16 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
 
     String? errorMessage;
+    UserModel? user;
+
     try {
       // login menerima 2 argumen posisional: email, password
-      await AuthService.login(
-        _emailC.text.trim(),
-        _passC.text,
-      );
+      await AuthService.login(_emailC.text.trim(), _passC.text);
+      user = await SessionService.getUser();
+
+      if (user == null) {
+        throw Exception('Data pengguna tidak ditemukan');
+      }
     } catch (e) {
       errorMessage = e.toString().replaceFirst('Exception: ', '');
     }
@@ -42,12 +49,16 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() => _loading = false);
 
-    if (errorMessage == null) {
-      Navigator.pushReplacementNamed(context, '/home');
+    if (errorMessage == null && user != null) {
+      final destination = user.role.toUpperCase() == 'MERCHANT'
+          ? '/merchant'
+          : '/home';
+
+      Navigator.pushReplacementNamed(context, destination);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorMessage),
+          content: Text(errorMessage ?? 'Login gagal'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -79,18 +90,26 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(22),
                       ),
-                      child: const Icon(Icons.account_balance_wallet_rounded,
-                          size: 44, color: AppColors.primary),
+                      child: const Icon(
+                        Icons.account_balance_wallet_rounded,
+                        size: 44,
+                        color: AppColors.primary,
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    const Text('Selamat Datang di myFTI',
-                        style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
+                    const Text(
+                      'Selamat Datang di myFTI',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    const Text('Masuk untuk melanjutkan',
-                        style: TextStyle(color: Colors.white70)),
+                    const Text(
+                      'Masuk untuk melanjutkan',
+                      style: TextStyle(color: Colors.white70),
+                    ),
                     const SizedBox(height: 32),
                     AuthField(
                       controller: _emailC,
@@ -115,8 +134,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       obscure: _obscure,
                       suffix: IconButton(
                         icon: Icon(
-                            _obscure ? Icons.visibility_off : Icons.visibility,
-                            color: AppColors.secondary),
+                          _obscure ? Icons.visibility_off : Icons.visibility,
+                          color: AppColors.secondary,
+                        ),
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                       validator: (v) {
@@ -137,32 +157,44 @@ class _LoginScreenState extends State<LoginScreen> {
                           backgroundColor: Colors.white,
                           foregroundColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                         child: _loading
                             ? const SizedBox(
                                 height: 22,
                                 width: 22,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2.5))
-                            : const Text('Login',
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text(
+                                'Login',
                                 style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w700)),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Belum punya akun? ',
-                            style: TextStyle(color: Colors.white70)),
+                        const Text(
+                          'Belum punya akun? ',
+                          style: TextStyle(color: Colors.white70),
+                        ),
                         GestureDetector(
                           onTap: () =>
                               Navigator.pushNamed(context, '/register'),
-                          child: const Text('Daftar',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold)),
+                          child: const Text(
+                            'Daftar',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                     ),
