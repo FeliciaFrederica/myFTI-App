@@ -13,11 +13,12 @@ class PaymentService {
 
     final response = await ApiClient.get('/payments/recipients', token: token);
 
-    final responseData = jsonDecode(response.body);
-
     if (response.statusCode == 401) {
+      await SessionService.clear();
       throw Exception('Session berakhir. Silakan login kembali.');
     }
+
+    final responseData = jsonDecode(response.body);
 
     if (response.statusCode < 200 ||
         response.statusCode >= 300 ||
@@ -53,11 +54,12 @@ class PaymentService {
       },
     );
 
-    final responseData = jsonDecode(response.body);
-
     if (response.statusCode == 401) {
+      await SessionService.clear();
       throw Exception('Session berakhir. Silakan login kembali.');
     }
+
+    final responseData = jsonDecode(response.body);
 
     if (response.statusCode < 200 ||
         response.statusCode >= 300 ||
