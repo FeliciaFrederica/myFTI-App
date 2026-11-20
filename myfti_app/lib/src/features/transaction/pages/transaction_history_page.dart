@@ -18,7 +18,8 @@ class TransactionHistoryPage extends StatefulWidget {
 class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     with WidgetsBindingObserver {
   Timer? _refreshTimer;
-  bool _isRefreshing = false;
+  bool _isFetching = false;
+  String? _refreshErrorMessage;
   SortOption _sortOption = SortOption.newest;
 
   final TransactionService _transactionService = TransactionService();
@@ -37,10 +38,16 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   }
 
   Future<void> _loadTransactions() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (!mounted || _isFetching) return;
+
+    _isFetching = true;
+
+    if (_transactions.isEmpty) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final transactions = await _transactionService.getTransactions();
@@ -49,15 +56,27 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
       setState(() {
         _transactions = transactions;
+        _errorMessage = null;
+        _refreshErrorMessage = null;
         _isLoading = false;
       });
     } catch (error) {
       if (!mounted) return;
 
       setState(() {
-        _errorMessage = error.toString().replaceFirst('Exception: ', '');
+        if (_transactions.isEmpty) {
+          _errorMessage = error.toString().replaceFirst('Exception: ', '');
+        } else {
+          _refreshErrorMessage = error.toString().replaceFirst(
+            'Exception: ',
+            '',
+          );
+        }
+
         _isLoading = false;
       });
+    } finally {
+      _isFetching = false;
     }
   }
 
@@ -86,9 +105,9 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   }
 
   Future<void> _refreshTransactionsSilently() async {
-    if (!mounted || _isRefreshing) return;
+    if (!mounted || _isFetching) return;
 
-    _isRefreshing = true;
+    _isFetching = true;
 
     try {
       final transactions = await _transactionService.getTransactions();
@@ -98,6 +117,8 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       setState(() {
         _transactions = transactions;
         _errorMessage = null;
+        _refreshErrorMessage = null;
+        _isLoading = false;
       });
     } catch (error) {
       if (!mounted) return;
@@ -106,7 +127,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         _errorMessage = error.toString().replaceFirst('Exception: ', '');
       });
     } finally {
-      _isRefreshing = false;
+      _isFetching = false;
     }
   }
 
@@ -252,7 +273,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         ? AppColors.success
         : AppColors.error;
 
-    final String sign = isIncoming ? '+' : '-';
+    final String sign = isFailed ? '' : (isIncoming ? '+' : '-');
 
     return Container(
       padding: const EdgeInsets.all(15),
@@ -425,11 +446,45 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                   ),
                 ),
               )
-            : TabBarView(
+            : Column(
                 children: [
-                  _buildTransactionList('all'),
-                  _buildTransactionList('incoming'),
-                  _buildTransactionList('outgoing'),
+                  if (_refreshErrorMessage != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      color: Colors.orange.withValues(alpha: 0.08),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.sync_problem,
+                            size: 16,
+                            color: Colors.orange,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Unable to refresh transactions. Showing previous data.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.orange.shade800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _buildTransactionList('all'),
+                        _buildTransactionList('incoming'),
+                        _buildTransactionList('outgoing'),
+                      ],
+                    ),
+                  ),
                 ],
               ),
       ),
