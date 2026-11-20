@@ -1,5 +1,6 @@
 const prisma = require("../../config/prisma");
 const crypto = require("crypto");
+const { notify, formatRupiah } = require("../../utils/notify");
 
 const getWallet = async (userId) => {
   return prisma.wallet.findUnique({
@@ -35,6 +36,13 @@ const topUp = async (userId, amount) => {
         userId,
       },
     });
+
+    await notify(
+      tx,
+      userId,
+      "Top Up berhasil",
+      `Top Up ${formatRupiah(amount)} berhasil ditambahkan ke saldo myFTI.`
+    );
 
     return {
       wallet: updatedWallet,

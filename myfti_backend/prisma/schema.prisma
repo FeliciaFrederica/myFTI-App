@@ -12,6 +12,7 @@ enum TransactionType {
   TRANSFER_IN
   TRANSFER_OUT
   PAYMENT
+  PAYMENT_IN
   WITHDRAW
 }
 
