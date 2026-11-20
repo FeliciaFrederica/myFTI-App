@@ -2,8 +2,8 @@ const prisma = require("../../config/prisma");
 
 const PERIODS = ["weekly", "monthly", "yearly"];
 
-// TOP_UP & TRANSFER_IN dihitung sebagai uang masuk, sisanya uang keluar
-const INCOME_TYPES = ["TOP_UP", "TRANSFER_IN"];
+// TOP_UP, TRANSFER_IN & PAYMENT_IN dihitung sebagai uang masuk, sisanya uang keluar
+const INCOME_TYPES = ["TOP_UP", "TRANSFER_IN", "PAYMENT_IN"];
 
 const createError = (message, statusCode) => {
   const error = new Error(message);

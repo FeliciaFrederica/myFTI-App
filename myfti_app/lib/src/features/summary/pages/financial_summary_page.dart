@@ -220,7 +220,6 @@ class _FinancialSummaryPageState extends State<FinancialSummaryPage> {
   Widget _buildExpenseIndicator(FinancialSummary summary) {
     final ratio = (summary.expensePercentage / 100).clamp(0.0, 1.0);
 
-    // Tiga warna: hijau (< 50%), kuning (50-80%), merah (> 80%)
     final color = ratio < 0.5
         ? AppColors.success
         : ratio < 0.8
@@ -342,6 +341,8 @@ class _FinancialSummaryPageState extends State<FinancialSummaryPage> {
         return 'Transfer Keluar';
       case 'PAYMENT':
         return 'Pembayaran';
+      case 'PAYMENT_IN':
+        return 'Pembayaran Masuk';
       case 'WITHDRAW':
         return 'Withdraw';
       default:
