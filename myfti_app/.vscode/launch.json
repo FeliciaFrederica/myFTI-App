@@ -18,7 +18,7 @@
       "name": "myFTI - HP Asli",
       "request": "launch",
       "type": "dart",
-      "args": ["--dart-define=API_BASE_URL=http://10.17.226.24:3000/api"] // Pakai IP Address laptop kalian
+      "args": ["--dart-define=API_BASE_URL=http://127.0.0.1:3000/api"]
     }
   ]
 }

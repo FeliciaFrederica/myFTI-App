@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'api_config.dart';
@@ -12,8 +13,11 @@ class ApiClient {
           'Authorization': 'Bearer $token',
       };
 
-  static Uri _uri(String endpoint) =>
-      Uri.parse('${ApiConfig.baseUrl}$endpoint');
+  static Uri _uri(String endpoint) {
+    final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+    debugPrint('API REQUEST: $uri');
+    return uri;
+  }
 
   static Future<http.Response> get(String endpoint, {String? token}) {
     return http.get(_uri(endpoint), headers: _headers(token));
