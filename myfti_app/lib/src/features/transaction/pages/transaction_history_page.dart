@@ -23,8 +23,13 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   SortOption _sortOption = SortOption.newest;
 
   final TransactionService _transactionService = TransactionService();
+  final ScrollController _scrollController = ScrollController();
 
   List<TransactionModel> _transactions = [];
+
+  String? _nextCursor;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -35,6 +40,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     WidgetsBinding.instance.addObserver(this);
     _loadTransactions();
     _startAutoRefresh();
+    _scrollController.addListener(_onScroll);
   }
 
   Future<void> _loadTransactions() async {
@@ -50,12 +56,16 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     }
 
     try {
-      final transactions = await _transactionService.getTransactions();
+      final result = await _transactionService.getTransactions(
+        sort: _sortOption == SortOption.oldest ? 'asc' : 'desc',
+      );
 
       if (!mounted) return;
 
       setState(() {
-        _transactions = transactions;
+        _transactions = result.transactions;
+        _nextCursor = result.nextCursor;
+        _hasMore = result.hasMore;
         _errorMessage = null;
         _refreshErrorMessage = null;
         _isLoading = false;
@@ -94,6 +104,54 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     _refreshTimer = null;
   }
 
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMore &&
+        !_isLoading) {
+      _loadMoreTransactions();
+    }
+  }
+
+  Future<void> _loadMoreTransactions() async {
+    if (_isLoadingMore || !_hasMore || _nextCursor == null) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final result = await _transactionService.getTransactions(
+        cursor: _nextCursor,
+        sort: _sortOption == SortOption.oldest ? 'asc' : 'desc',
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        final existingIds = _transactions.map((e) => e.id).toSet();
+
+        _transactions.addAll(
+          result.transactions.where((e) => !existingIds.contains(e.id)),
+        );
+
+        _nextCursor = result.nextCursor;
+        _hasMore = result.hasMore;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _refreshErrorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
+      }
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -110,12 +168,33 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     _isFetching = true;
 
     try {
-      final transactions = await _transactionService.getTransactions();
+      final result = await _transactionService.getTransactions(
+        sort: _sortOption == SortOption.oldest ? 'asc' : 'desc',
+      );
 
       if (!mounted) return;
 
       setState(() {
-        _transactions = transactions;
+        final updated = {
+          for (final transaction in _transactions) transaction.id: transaction,
+        };
+
+        for (final transaction in result.transactions) {
+          updated[transaction.id] = transaction;
+        }
+
+        _transactions = updated.values.toList()
+          ..sort(
+            (a, b) => _sortOption == SortOption.oldest
+                ? a.createdAt.compareTo(b.createdAt)
+                : b.createdAt.compareTo(a.createdAt),
+          );
+
+        if (_nextCursor == null) {
+          _nextCursor = result.nextCursor;
+          _hasMore = result.hasMore;
+        }
+
         _errorMessage = null;
         _refreshErrorMessage = null;
         _isLoading = false;
@@ -124,16 +203,16 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       if (!mounted) return;
 
       setState(() {
-        _errorMessage = error.toString().replaceFirst('Exception: ', '');
+        _refreshErrorMessage = error.toString().replaceFirst('Exception: ', '');
       });
-    } finally {
-      _isFetching = false;
     }
   }
 
   @override
   void dispose() {
     _stopAutoRefresh();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -254,10 +333,17 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 110),
-      itemCount: transactions.length,
+      itemCount: transactions.length + (_isLoadingMore ? 1 : 0),
       separatorBuilder: (context, index) => const SizedBox(height: 12),
+      controller: _scrollController,
       itemBuilder: (context, index) {
+        if (index >= transactions.length) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
         return _buildTransactionCard(transactions[index]);
       },
     );
