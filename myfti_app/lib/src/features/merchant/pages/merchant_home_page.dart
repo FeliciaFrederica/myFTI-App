@@ -98,16 +98,16 @@ class _MerchantHomePageState extends State<MerchantHomePage>
       }
 
       try {
-        final transactions = await _transactionService.getTransactions();
+        final result = await _transactionService.getTransactions();
 
-        if (mounted) {
-          setState(() {
-            _transactions = transactions
-                .where((item) => item.type == 'PAYMENT')
-                .toList();
-            _transactionError = null;
-          });
-        }
+        if (!mounted) return;
+
+        setState(() {
+          _transactions = result.transactions
+              .where((transaction) => transaction.type == 'PAYMENT')
+              .toList();
+          _isLoadingTransactions = false;
+        });
       } catch (error) {
         if (mounted) {
           setState(() {
@@ -162,16 +162,16 @@ class _MerchantHomePageState extends State<MerchantHomePage>
     });
 
     try {
-      final transactions = await _transactionService.getTransactions();
+      final result = await _transactionService.getTransactions();
 
-      if (!mounted) return;
-
-      setState(() {
-        _transactions = transactions
-            .where((transaction) => transaction.type == 'PAYMENT')
-            .toList();
-        _isLoadingTransactions = false;
-      });
+      if (mounted) {
+        setState(() {
+          _transactions = result.transactions
+              .where((item) => item.type == 'PAYMENT')
+              .toList();
+          _transactionError = null;
+        });
+      }
     } catch (error) {
       if (!mounted) return;
 
