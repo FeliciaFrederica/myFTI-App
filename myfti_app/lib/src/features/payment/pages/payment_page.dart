@@ -106,7 +106,7 @@ class _PaymentPageState extends State<PaymentPage> {
       _categoryError = null;
     });
   }
-  
+
   void _onAmountChanged(String value) {
     setState(() {
       if (value.isEmpty) {
@@ -409,7 +409,7 @@ class _PaymentPageState extends State<PaymentPage> {
             return ChoiceChip(
               label: Text(category),
               selected: isSelected,
-              onSelected: (_) => _selectCategory(category),
+              onSelected: _isPaying ? null : (_) => _selectCategory(category),
               selectedColor: const Color(0xFFEDE7F6),
               backgroundColor: Colors.white,
               labelStyle: TextStyle(
@@ -437,6 +437,7 @@ class _PaymentPageState extends State<PaymentPage> {
         const SizedBox(height: 12),
         TextField(
           controller: _amountController,
+          enabled: !_isPaying,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           onChanged: _onAmountChanged,
@@ -461,7 +462,6 @@ class _PaymentPageState extends State<PaymentPage> {
                 ),
               ),
         ),
-        _buildWarning(_amountError),
       ],
     );
   }
@@ -474,6 +474,7 @@ class _PaymentPageState extends State<PaymentPage> {
         const SizedBox(height: 12),
         TextField(
           controller: _notesController,
+          enabled: !_isPaying,
           maxLines: 2,
           maxLength: 150,
           decoration: _inputDecoration(hint: 'Tambahkan catatan pembayaran')
