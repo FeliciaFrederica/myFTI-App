@@ -34,9 +34,9 @@ class PaymentService {
   }
 
   static Future<Map<String, dynamic>> createPayment({
-    required String category,
+    required String merchantId,
     required int amount,
-    String? description,
+    String? description,    
   }) async {
     final token = await SessionService.getToken();
 
@@ -48,10 +48,11 @@ class PaymentService {
       '/payments',
       token: token,
       body: {
-        'category': category,
+        'merchantId': merchantId,
         'amount': amount,
         'description': description ?? '',
       },
+      
     );
 
     if (response.statusCode == 401) {

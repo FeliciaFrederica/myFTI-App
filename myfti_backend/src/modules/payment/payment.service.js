@@ -37,12 +37,19 @@ const getPaymentRecipients = async () => {
 };
 
 const createPayment = async (studentId, data) => {
-  const { category } = data;
+  const { merchantId } = data;
   const amount = Number(data.amount);
   const description =
     typeof data.description === "string"
       ? data.description.trim()
       : "";
+
+    if (description.length > 150) {
+      throw Object.assign(
+        new Error("Description must not exceed 150 characters"),
+        { statusCode: 400 }
+      );
+    }
 
   // Validasi kategori pembayaran
   const allowedCategories = [
@@ -75,23 +82,20 @@ const createPayment = async (studentId, data) => {
             include: { wallet: true },
           });
 
-          const merchants = await tx.user.findMany({
+          const merchant = await tx.user.findFirst({
             where: {
+              id: merchantId,
               role: "MERCHANT",
-              merchantCategory: category,
             },
             include: { wallet: true },
-            take: 2,
           });
 
-          if (merchants.length !== 1) {
-            throw Object.assign(new Error("Merchant category is unavailable"), {
+          if (!merchant) {
+            throw Object.assign(new Error("Merchant not found"), {
               statusCode: 404,
             });
           }
-
-          const merchant = merchants[0];
-
+          
           if (!student || student.role !== "STUDENT") {
             throw Object.assign(new Error("Student account not found"), {
               statusCode: 404,

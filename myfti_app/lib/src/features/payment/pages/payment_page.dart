@@ -40,9 +40,13 @@ class _PaymentPageState extends State<PaymentPage> {
 
   Map<String, dynamic>? _wallet;
 
+  List<Map<String, dynamic>> _recipients = [];
+  String? _selectedMerchantId;
+
   String? _selectedCategory;
 
   String? _categoryError;
+  String? _merchantError;
   String? _amountError;
 
   bool _isLoading = true;
@@ -52,6 +56,25 @@ class _PaymentPageState extends State<PaymentPage> {
   int get _amount => int.tryParse(_amountController.text) ?? 0;
 
   int get _balance => (_wallet?['balance'] as num?)?.toInt() ?? 0;
+
+  List<Map<String, dynamic>> get _filteredMerchants {
+    final categoryValue = _categoryValues[_selectedCategory];
+
+    if (categoryValue == null) return [];
+
+    return _recipients
+        .where((merchant) => merchant['category'] == categoryValue)
+        .toList();
+  }
+
+  String? get _selectedMerchantName {
+    for (final merchant in _recipients) {
+      if (merchant['id'] == _selectedMerchantId) {
+        return merchant['name'] as String?;
+      }
+    }
+    return null;
+  }
 
   String _formatRupiah(int amount) {
     final formatted = amount.toString().replaceAllMapped(
@@ -83,11 +106,13 @@ class _PaymentPageState extends State<PaymentPage> {
 
     try {
       final wallet = await _walletService.getWallet();
+      final recipients = await PaymentService.getRecipients();
 
       if (!mounted) return;
 
       setState(() {
         _wallet = wallet;
+        _recipients = recipients;
         _isLoading = false;
       });
     } catch (error) {
@@ -103,7 +128,9 @@ class _PaymentPageState extends State<PaymentPage> {
   void _selectCategory(String category) {
     setState(() {
       _selectedCategory = category;
+      _selectedMerchantId = null;
       _categoryError = null;
+      _merchantError = null;
     });
   }
 
@@ -126,10 +153,19 @@ class _PaymentPageState extends State<PaymentPage> {
 
     setState(() {
       _categoryError = null;
+      _merchantError = null;
       _amountError = null;
 
       if (_selectedCategory == null) {
         _categoryError = 'Pilih kategori pembayaran.';
+        isValid = false;
+      }
+
+      if (_selectedMerchantId == null ||
+          !_filteredMerchants.any(
+            (merchant) => merchant['id'] == _selectedMerchantId,
+          )) {
+        _merchantError = 'Pilih merchant tujuan.';
         isValid = false;
       }
 
@@ -158,6 +194,8 @@ class _PaymentPageState extends State<PaymentPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _confirmationRow('Kategori', _selectedCategory!),
+              const SizedBox(height: 10),
+              _confirmationRow('Merchant', _selectedMerchantName ?? '-'),
               const SizedBox(height: 10),
               _confirmationRow('Nominal', _formatRupiah(_amount)),
               const SizedBox(height: 10),
@@ -214,6 +252,52 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
+  Widget _buildMerchantSelector() {
+    final merchants = _filteredMerchants;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Pilih Merchant'),
+        const SizedBox(height: 12),
+        if (_selectedCategory == null)
+          const Text(
+            'Pilih kategori terlebih dahulu.',
+            style: TextStyle(color: Colors.grey),
+          )
+        else if (merchants.isEmpty)
+          const Text(
+            'Belum ada merchant untuk kategori ini.',
+            style: TextStyle(color: Colors.grey),
+          )
+        else
+          DropdownButtonFormField<String>(
+            initialValue: _selectedMerchantId,
+            isExpanded: true,
+            decoration: _inputDecoration(hint: 'Pilih merchant tujuan'),
+            items: merchants.map((merchant) {
+              return DropdownMenuItem<String>(
+                value: merchant['id'] as String,
+                child: Text(
+                  merchant['name'] as String,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            onChanged: _isPaying
+                ? null
+                : (value) {
+                    setState(() {
+                      _selectedMerchantId = value;
+                      _merchantError = null;
+                    });
+                  },
+          ),
+        _buildWarning(_merchantError),
+      ],
+    );
+  }
+
   Future<void> _submitPayment() async {
     setState(() {
       _isPaying = true;
@@ -221,7 +305,7 @@ class _PaymentPageState extends State<PaymentPage> {
 
     try {
       final result = await PaymentService.createPayment(
-        category: _categoryValues[_selectedCategory]!,
+        merchantId: _selectedMerchantId!,
         amount: _amount,
         description: _notesController.text.trim(),
       );
@@ -568,6 +652,9 @@ class _PaymentPageState extends State<PaymentPage> {
           const SizedBox(height: 28),
 
           _buildCategorySelector(),
+          const SizedBox(height: 24),
+
+          _buildMerchantSelector(),
           const SizedBox(height: 24),
 
           _buildAmountField(),
