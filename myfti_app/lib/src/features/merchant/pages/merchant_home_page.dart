@@ -7,6 +7,7 @@ import '../../authentication/models/user_model.dart';
 import '../../transaction/models/transaction_model.dart';
 import '../../transaction/services/transaction_service.dart';
 import '../../wallet/services/wallet_service.dart';
+import '../../authentication/services/auth_service.dart';
 
 class MerchantHomePage extends StatefulWidget {
   const MerchantHomePage({super.key});
@@ -53,7 +54,7 @@ class _MerchantHomePageState extends State<MerchantHomePage>
     _refreshTimer?.cancel();
 
     _refreshTimer = Timer.periodic(
-      const Duration(seconds: 10),
+      const Duration(seconds: 30),
       (_) => _refreshDashboardSilently(),
     );
   }
@@ -186,7 +187,9 @@ class _MerchantHomePageState extends State<MerchantHomePage>
   }
 
   Future<void> _logout(BuildContext context) async {
-    await SessionService.clear();
+    _stopAutoRefresh();
+
+    await AuthService.logout();
 
     if (!context.mounted) return;
 
@@ -512,6 +515,54 @@ class _MerchantHomePageState extends State<MerchantHomePage>
     return FutureBuilder<UserModel?>(
       future: _userFuture,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: Color(0xFFF8F6FC),
+            body: Center(
+              child: CircularProgressIndicator(color: Color(0xFF673AB7)),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F6FC),
+            appBar: AppBar(
+              title: const Text('Merchant Dashboard'),
+              backgroundColor: const Color(0xFFF8F6FC),
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Failed to load user information.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _userFuture = SessionService.getUser();
+                        });
+                      },
+                      child: const Text('Try Again'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
         final user = snapshot.data;
 
         return Scaffold(
