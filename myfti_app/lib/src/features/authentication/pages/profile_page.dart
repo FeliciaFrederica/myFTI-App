@@ -4,6 +4,8 @@ import '../../../core/theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../widgets/auth_field.dart';
 
+const Color _kCardColor = Color(0xFFF3EEFC);
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -41,101 +43,16 @@ class _ProfilePageState extends State<ProfilePage> {
     ));
   }
 
-  void _openEditSheet(UserModel user) {
-    final formKey = GlobalKey<FormState>();
-    final nameC = TextEditingController(text: user.name);
-    final emailC = TextEditingController(text: user.email);
-    bool saving = false;
-
-    showModalBottomSheet(
+  Future<void> _openEditDialog(UserModel user) async {
+    final saved = await showDialog<bool>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.background,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => Padding(
-          padding: EdgeInsets.fromLTRB(
-              24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Edit Profil',
-                    style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.text)),
-                const SizedBox(height: 20),
-                AuthField(
-                  controller: nameC,
-                  label: 'Nama Lengkap',
-                  icon: Icons.person_outline,
-                  validator: (v) => (v == null || v.trim().length < 3)
-                      ? 'Nama minimal 3 karakter'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                AuthField(
-                  controller: emailC,
-                  label: 'Email',
-                  icon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Email wajib diisi';
-                    }
-                    final ok = RegExp(r'^[\w\.\-]+@[\w\-]+\.[\w\.\-]+$')
-                        .hasMatch(v.trim());
-                    return ok ? null : 'Format email tidak valid';
-                  },
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: saving
-                        ? null
-                        : () async {
-                            if (!formKey.currentState!.validate()) return;
-                            setSheet(() => saving = true);
-                            try {
-                              await AuthService.updateProfile(
-                                name: nameC.text.trim(),
-                                email: emailC.text.trim(),
-                              );
-                              if (ctx.mounted) Navigator.pop(ctx);
-                              _reload();
-                              _showSnack('Profil berhasil diperbarui',
-                                  success: true);
-                            } catch (e) {
-                              if (ctx.mounted) setSheet(() => saving = false);
-                              _showSnack(_errorText(e), success: false);
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: saving
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2.5, color: Colors.white))
-                        : const Text('Simpan'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      builder: (_) => _EditProfileDialog(user: user),
     );
+
+    if (saved == true) {
+      _reload();
+      _showSnack('Profil berhasil diperbarui', success: true);
+    }
   }
 
   @override
@@ -143,15 +60,27 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Profil'),
         automaticallyImplyLeading: false,
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleSpacing: 20,
+        title: const Text(
+          'Profil',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppColors.text,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings, color: AppColors.primary),
             onPressed: () => Navigator.pushNamed(context, '/settings'),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: FutureBuilder<UserModel>(
@@ -206,7 +135,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 24),
                 Card(
-                  color: AppColors.card,
+                  color: _kCardColor,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
@@ -225,7 +154,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 SizedBox(
                   height: 50,
                   child: ElevatedButton.icon(
-                    onPressed: () => _openEditSheet(user),
+                    onPressed: () => _openEditDialog(user),
                     icon: const Icon(Icons.edit),
                     label: const Text('Edit Profil'),
                     style: ElevatedButton.styleFrom(
@@ -254,4 +183,185 @@ class _ProfilePageState extends State<ProfilePage> {
                 color: AppColors.text,
                 fontWeight: FontWeight.w500)),
       );
+}
+
+// Pop up edit profil.
+class _EditProfileDialog extends StatefulWidget {
+  final UserModel user;
+  const _EditProfileDialog({required this.user});
+
+  @override
+  State<_EditProfileDialog> createState() => _EditProfileDialogState();
+}
+
+class _EditProfileDialogState extends State<_EditProfileDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameC;
+  late final TextEditingController _emailC;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameC = TextEditingController(text: widget.user.name);
+    _emailC = TextEditingController(text: widget.user.email);
+  }
+
+  @override
+  void dispose() {
+    _nameC.dispose();
+    _emailC.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    try {
+      await AuthService.updateProfile(
+        name: _nameC.text.trim(),
+        email: _emailC.text.trim(),
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      // Dialog tidak bisa ditutup saat sedang menyimpan
+      canPop: !_saving,
+      child: Dialog(
+        backgroundColor: _kCardColor,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Edit Profil',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.text,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                AuthField(
+                  controller: _nameC,
+                  label: 'Nama Lengkap',
+                  icon: Icons.person_outline,
+                  onLight: true,
+                  textInputAction: TextInputAction.next,
+                  validator: (v) => (v == null || v.trim().length < 3)
+                      ? 'Nama minimal 3 karakter'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                AuthField(
+                  controller: _emailC,
+                  label: 'Email',
+                  icon: Icons.email_outlined,
+                  onLight: true,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Email wajib diisi';
+                    }
+                    final ok = RegExp(r'^[\w\.\-]+@[\w\-]+\.[\w\.\-]+$')
+                        .hasMatch(v.trim());
+                    return ok ? null : 'Format email tidak valid';
+                  },
+                ),
+
+                // Error dari server tampil di dalam dialog
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+
+                // Tombol Simpan (atas, penuh)
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _saving ? null : _save,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Simpan',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // Tombol Batal (bawah, teks abu-abu)
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: TextButton(
+                    onPressed: _saving ? null : () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey,
+                      disabledForegroundColor: Colors.grey.shade400,
+                    ),
+                    child: const Text(
+                      'Batal',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

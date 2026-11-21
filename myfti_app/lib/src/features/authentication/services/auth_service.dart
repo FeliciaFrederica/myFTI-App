@@ -168,6 +168,7 @@ class AuthService {
   }
 
   // Perbarui nama dan email user yang sedang login.
+  // Nama boleh lebih dari satu kata (contoh: "Vianlienra Hung").
   static Future<void> updateProfile({
     required String name,
     required String email,
@@ -176,7 +177,8 @@ class AuthService {
       _send(
         'PUT',
         '/auth/profile',
-        body: {'name': name, 'email': email},
+        // Key HARUS 'fullName' agar cocok dengan updateProfileSchema di backend
+        body: {'fullName': name, 'email': email},
         auth: true,
       ),
     );
@@ -190,8 +192,14 @@ class AuthService {
       throw Exception(_message(body, 'Gagal memperbarui profil'));
     }
 
-    // sinkronkan data user di SessionService
-    await SessionService.saveUser(UserModel.fromJson(_userMap(body)));
+    // Sinkronkan data user di SessionService. Kalau bentuk respons berbeda,
+    // abaikan saja: data sudah tersimpan di server dan halaman profil
+    // akan memuat ulang lewat getProfile().
+    try {
+      await SessionService.saveUser(UserModel.fromJson(_userMap(body)));
+    } catch (e) {
+      debugPrint('UPDATE PROFILE: gagal sinkron sesi lokal: $e');
+    }
   }
 
   // Dipakai splash screen untuk menentukan ke login atau home.

@@ -11,6 +11,10 @@ class AuthField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final String? Function(String?)? validator;
 
+  /// true  = dipakai di latar terang (dialog/kartu)
+  /// false = dipakai di latar ungu (login/register), default
+  final bool onLight;
+
   const AuthField({
     super.key,
     required this.controller,
@@ -21,6 +25,7 @@ class AuthField extends StatelessWidget {
     this.keyboardType,
     this.textInputAction,
     this.validator,
+    this.onLight = false,
   });
 
   OutlineInputBorder _border(Color color, [double width = 0]) =>
@@ -33,16 +38,18 @@ class AuthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final labelColor = onLight ? AppColors.text : Colors.white;
+    final errorColor = onLight ? AppColors.error : const Color(0xFFFFCDD2);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label di atas kotak -> tidak akan pernah terpotong
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Text(
             label,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: labelColor,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -59,7 +66,7 @@ class AuthField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: label,
             hintStyle: TextStyle(
-              color: const Color(0xFF2D2640).withOpacity(0.4),
+              color: const Color(0xFF2D2640).withValues(alpha: 0.4),
             ),
             filled: true,
             fillColor: const Color(0xFFEDE7F6),
@@ -67,15 +74,15 @@ class AuthField extends StatelessWidget {
             suffixIcon: suffix,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            errorStyle: const TextStyle(
-              color: Color(0xFFFFCDD2), // merah muda terang, kontras di ungu
+            errorStyle: TextStyle(
+              color: errorColor,
               fontWeight: FontWeight.w600,
             ),
             border: _border(Colors.transparent),
             enabledBorder: _border(Colors.transparent),
             focusedBorder: _border(AppColors.primary, 1.5),
-            errorBorder: _border(const Color(0xFFFFCDD2), 1.2),
-            focusedErrorBorder: _border(const Color(0xFFFFCDD2), 1.8),
+            errorBorder: _border(errorColor, 1.2),
+            focusedErrorBorder: _border(errorColor, 1.8),
           ),
         ),
       ],

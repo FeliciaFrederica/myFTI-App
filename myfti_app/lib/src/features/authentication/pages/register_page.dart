@@ -93,7 +93,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: Center(
                         child: Padding(
                           // top 48 supaya tidak tertimpa tombol back
-                          // saat layar kecil / di-scroll
                           padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
                           child: Form(
                             key: _formKey,
@@ -194,12 +193,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       _obscure,
                                       () =>
                                           setState(() => _obscure = !_obscure)),
+                                  // Disamakan dengan registerSchema di backend:
+                                  // min 8 karakter, ada huruf, ada angka
                                   validator: (v) {
                                     if (v == null || v.isEmpty) {
                                       return 'Password wajib diisi';
                                     }
-                                    if (v.length < 6) {
-                                      return 'Password minimal 6 karakter';
+                                    if (v.length < 8) {
+                                      return 'Password minimal 8 karakter';
+                                    }
+                                    if (!RegExp(r'[A-Za-z]').hasMatch(v)) {
+                                      return 'Password harus mengandung huruf';
+                                    }
+                                    if (!RegExp(r'\d').hasMatch(v)) {
+                                      return 'Password harus mengandung angka';
                                     }
                                     return null;
                                   },
@@ -269,7 +276,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     GestureDetector(
                                       onTap: () => Navigator.pop(context),
                                       child: const Text(
-                                        'Login',
+                                        'Masuk',
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../services/auth_service.dart';
+import '../../notification/pages/notification_page.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -29,6 +30,13 @@ class SettingsScreen extends StatelessWidget {
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
+  void _openNotification(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NotificationPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,6 +52,7 @@ class SettingsScreen extends StatelessWidget {
           Card(
             color: AppColors.card,
             elevation: 0,
+            clipBehavior: Clip.antiAlias,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16)),
             child: Column(
@@ -53,7 +62,7 @@ class SettingsScreen extends StatelessWidget {
                       color: AppColors.primary),
                   title: const Text('Notifikasi'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.pushNamed(context, '/notification'),
+                  onTap: () => _openNotification(context),
                 ),
                 const Divider(height: 1),
                 ListTile(
