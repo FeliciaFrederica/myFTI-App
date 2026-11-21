@@ -338,7 +338,6 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
 
                 const SizedBox(height: 8),
 
-                // Tombol Batal (bawah, teks abu-abu)
                 SizedBox(
                   width: double.infinity,
                   height: 44,

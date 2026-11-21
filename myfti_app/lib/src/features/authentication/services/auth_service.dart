@@ -177,7 +177,6 @@ class AuthService {
       _send(
         'PUT',
         '/auth/profile',
-        // Key HARUS 'fullName' agar cocok dengan updateProfileSchema di backend
         body: {'fullName': name, 'email': email},
         auth: true,
       ),

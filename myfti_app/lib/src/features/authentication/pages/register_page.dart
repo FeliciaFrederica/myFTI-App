@@ -81,7 +81,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: SafeArea(
           child: Stack(
             children: [
-              // Konten utama (di tengah layar, sama seperti login)
               LayoutBuilder(
                 builder: (context, constraints) {
                   return SingleChildScrollView(
@@ -92,14 +91,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           BoxConstraints(minHeight: constraints.maxHeight),
                       child: Center(
                         child: Padding(
-                          // top 48 supaya tidak tertimpa tombol back
                           padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
                           child: Form(
                             key: _formKey,
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Logo dompet (sama dengan login)
                                 Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
