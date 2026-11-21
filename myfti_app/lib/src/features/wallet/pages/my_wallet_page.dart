@@ -9,10 +9,10 @@ class MyWalletPage extends StatefulWidget {
   const MyWalletPage({super.key, this.onHistoryTap});
 
   @override
-  State<MyWalletPage> createState() => _MyWalletPageState();
+  MyWalletPageState createState() => MyWalletPageState();
 }
 
-class _MyWalletPageState extends State<MyWalletPage> {
+class MyWalletPageState extends State<MyWalletPage> {
   static const Color primaryPurple = Color(0xFF673AB7);
   static const Color backgroundColor = Color(0xFFF8F6FC);
   static const Color textColor = Color(0xFF2D1B46);
@@ -20,6 +20,8 @@ class _MyWalletPageState extends State<MyWalletPage> {
   final WalletService _walletService = WalletService();
 
   late Future<Map<String, dynamic>> _walletFuture;
+
+  bool _isBalanceVisible = false;
 
   @override
   void initState() {
@@ -29,6 +31,14 @@ class _MyWalletPageState extends State<MyWalletPage> {
 
   void _loadWallet() {
     _walletFuture = _walletService.getWallet();
+  }
+
+  void hideBalance() {
+    if (!mounted) return;
+
+    setState(() {
+      _isBalanceVisible = false;
+    });
   }
 
   String _formatRupiah(int amount) {
@@ -46,7 +56,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text(
-          'My Wallet',
+          'Dompet Saya',
           style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         backgroundColor: backgroundColor,
@@ -89,7 +99,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
           final String walletId = wallet['walletId'] as String;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 170),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -98,40 +108,67 @@ class _MyWalletPageState extends State<MyWalletPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF673AB7), Color(0xFF9575CD)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: const Color(0xFF673AB7),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.account_balance_wallet_outlined,
-                        color: Colors.white,
-                        size: 32,
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.account_balance_wallet_outlined,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Dompet Digital myFTI',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 20),
                       const Text(
-                        'Available Balance',
+                        'Saldo Tersedia',
                         style: TextStyle(color: Colors.white70, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        _formatRupiah(balance),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _isBalanceVisible
+                                  ? _formatRupiah(balance)
+                                  : 'Rp ••••••••',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _isBalanceVisible = !_isBalanceVisible;
+                              });
+                            },
+                            icon: Icon(
+                              _isBalanceVisible
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              color: Colors.white,
+                            ),
+                            tooltip: _isBalanceVisible ? 'Sembunyikan saldo' : 'Tampilkan saldo',
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'myFTI Digital Wallet',
-                        style: TextStyle(color: Colors.white, fontSize: 14),
-                      ),
+                      const SizedBox(height: 3),
                     ],
                   ),
                 ),
@@ -140,7 +177,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
 
                 // Wallet Information
                 const Text(
-                  'Wallet Information',
+                  'Informasi Wallet',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -157,20 +194,20 @@ class _MyWalletPageState extends State<MyWalletPage> {
                     children: [
                       _buildInfoTile(
                         icon: Icons.credit_card,
-                        title: 'Wallet ID',
+                        title: 'ID Dompet',
                         subtitle: walletId,
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       _buildInfoTile(
                         icon: Icons.verified_user_outlined,
-                        title: 'Wallet Status',
-                        subtitle: 'Active',
+                        title: 'Status Dompet',
+                        subtitle: 'Aktif',
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       _buildInfoTile(
                         icon: Icons.account_balance_outlined,
-                        title: 'Account Type',
-                        subtitle: 'Student Wallet',
+                        title: 'Jenis Akun',
+                        subtitle: 'Dompet Mahasiswa',
                       ),
                     ],
                   ),
@@ -180,7 +217,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
 
                 // Quick Actions
                 const Text(
-                  'Wallet Actions',
+                  'Menu Dompet',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -197,16 +234,17 @@ class _MyWalletPageState extends State<MyWalletPage> {
                         icon: Icons.add_circle_outline,
                         label: 'Top Up',
                         onTap: () async {
-                          await Navigator.push(
+                          final result = await Navigator.push<bool>(
                             context,
                             MaterialPageRoute(
                               builder: (context) => const TopUpPage(),
                             ),
                           );
-
-                          setState(() {
-                            _loadWallet();
-                          });
+                          if (result == true && mounted) {
+                            setState(() {
+                              _loadWallet();
+                            });
+                          }
                         },
                       ),
                     ),
@@ -214,7 +252,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
                     Expanded(
                       child: _buildActionButton(
                         icon: Icons.receipt_long_outlined,
-                        label: 'History',
+                        label: 'Riwayat',
                         onTap: widget.onHistoryTap ?? () {},
                       ),
                     ),
