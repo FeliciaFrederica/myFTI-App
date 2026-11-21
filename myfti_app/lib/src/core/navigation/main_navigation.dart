@@ -15,15 +15,29 @@ class MainNavigation extends StatefulWidget {
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  void _switchTab(int index) {
-    if (index >= 0 && index < _pages.length) {
-      if (index == 1) {
-        _walletKey.currentState?.hideBalance();
-      }
+  double _pageOpacity = 1.0;
+
+ void _switchTab(int index) {
+    if (index < 0 || index >= _pages.length || index == _currentIndex) {
+      return;
+    }
+
+    if (index == 1) {
+      _walletKey.currentState?.hideBalance();
+    }
+
+    setState(() {
+      _pageOpacity = 0.0;
+    });
+
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (!mounted) return;
+
       setState(() {
         _currentIndex = index;
+        _pageOpacity = 1.0;
       });
-    }
+    });
   }
 
   int _currentIndex = 0;
@@ -45,18 +59,24 @@ class _MainNavigationState extends State<MainNavigation> {
     Icons.person_outline,
   ];
 
-  final List<String> _labels = ['Home', 'Wallet', 'History', 'Profile'];
+  final List<String> _labels = ['Beranda', 'Dompet', 'Riwayat', 'Profil'];
   final GlobalKey<MyWalletPageState> _walletKey = GlobalKey<MyWalletPageState>();
   
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-
-      // Allow page content to extend behind the navbar
       extendBody: true,
 
-      body: IndexedStack(index: _currentIndex, children: _pages),
+      body: AnimatedOpacity(
+        opacity: _pageOpacity,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _pages,
+        ),
+      ),
 
       bottomNavigationBar: SafeArea(
         top: false,
