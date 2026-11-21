@@ -17,6 +17,9 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   void _switchTab(int index) {
     if (index >= 0 && index < _pages.length) {
+      if (index == 1) {
+        _walletKey.currentState?.hideBalance();
+      }
       setState(() {
         _currentIndex = index;
       });
@@ -30,7 +33,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   late final List<Widget> _pages = [
     HomePage(),
-    MyWalletPage(onHistoryTap: () => _switchTab(2)),
+    MyWalletPage(key: _walletKey, onHistoryTap: () => _switchTab(2)),
     TransactionHistoryPage(),
     ProfilePage(),
   ];
@@ -43,7 +46,8 @@ class _MainNavigationState extends State<MainNavigation> {
   ];
 
   final List<String> _labels = ['Home', 'Wallet', 'History', 'Profile'];
-
+  final GlobalKey<MyWalletPageState> _walletKey = GlobalKey<MyWalletPageState>();
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,13 +104,7 @@ class _MainNavigationState extends State<MainNavigation> {
                                   return Expanded(
                                     child: InkWell(
                                       borderRadius: BorderRadius.circular(26),
-                                      onTap: () {
-                                        if (index < _pages.length) {
-                                          setState(() {
-                                            _currentIndex = index;
-                                          });
-                                        }
-                                      },
+                                      onTap: () => _switchTab(index),
                                       child: Padding(
                                         padding: const EdgeInsets.only(top: 23),
                                         child: Column(
