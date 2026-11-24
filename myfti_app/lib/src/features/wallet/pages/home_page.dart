@@ -11,7 +11,12 @@ import '../../authentication/models/user_model.dart';
 import '../../authentication/services/auth_service.dart';
 import '../../transaction/pages/transaction_history_page.dart';
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final VoidCallback? onProfileTap;
+
+  const HomePage({
+    super.key,
+    this.onProfileTap,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -105,49 +110,59 @@ class _HomePageState extends State<HomePage> {
                 // Header
                 Row(
                   children: [
-                    const CircleAvatar(
-                      backgroundColor: Color(0xFFEDE7F6),
-                      child: Icon(
-                        Icons.person,
-                        color: primaryPurple,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Selamat Datang,',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                          FutureBuilder<UserModel>(
-                            future: _userFuture,
-                            builder: (context, snapshot) {
-                              if (snapshot.hasError) {
-                                return Text(
-                                  'Mahasiswa FTI!',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: textColor,
+                      child: InkWell(
+                        onTap: widget.onProfileTap,
+                        borderRadius: BorderRadius.circular(30),
+                        child: Row(
+                          children: [
+                            const CircleAvatar(
+                              backgroundColor: Color(0xFFEDE7F6),
+                              child: Icon(
+                                Icons.person,
+                                color: primaryPurple,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Selamat Datang,',
+                                    style: TextStyle(color: Colors.grey),
                                   ),
-                                );
-                              }
+                                  FutureBuilder<UserModel>(
+                                    future: _userFuture,
+                                    builder: (context, snapshot) {
+                                      if (snapshot.hasError) {
+                                        return const Text(
+                                          'Mahasiswa FTI!',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: textColor,
+                                          ),
+                                        );
+                                      }
 
-                              return Text(
-                                snapshot.hasData
-                                    ? '${snapshot.data!.name}!'
-                                    : 'Memuat profil...',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: textColor,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                                      return Text(
+                                        snapshot.hasData
+                                            ? '${snapshot.data!.name}!'
+                                            : 'Memuat profil...',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: textColor,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     IconButton(

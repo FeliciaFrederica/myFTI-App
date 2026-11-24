@@ -46,7 +46,7 @@ class _MainNavigationState extends State<MainNavigation> {
   static const Color backgroundColor = Color(0xFFF8F6FC);
 
   late final List<Widget> _pages = [
-    HomePage(),
+    HomePage(onProfileTap: () => _switchTab(3)),
     MyWalletPage(key: _walletKey, onHistoryTap: () => _switchTab(2)),
     TransactionHistoryPage(),
     ProfilePage(),
