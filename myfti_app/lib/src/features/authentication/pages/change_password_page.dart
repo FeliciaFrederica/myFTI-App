@@ -4,6 +4,10 @@ import '../services/auth_service.dart';
 
 const int _kMinPassword = 8;
 
+const Color _kBackgroundColor = Color(0xFFF8F6FC);
+const Color _kBorderColor = Color(0xFFD1C4E9);
+const Color _kErrorFillColor = Color(0xFFFDF4F4);
+
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
 
@@ -13,12 +17,17 @@ class ChangePasswordPage extends StatefulWidget {
 
 class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final _formKey = GlobalKey<FormState>();
+  final _oldKey = GlobalKey<FormFieldState<String>>();
   final _confirmKey = GlobalKey<FormFieldState<String>>();
   final _oldC = TextEditingController();
   final _newC = TextEditingController();
   final _confirmC = TextEditingController();
   bool _saving = false;
+
   String? _error;
+
+  // Error dari server khusus password lama, akan tampil di bawah field password lama
+  String? _oldServerError;
 
   @override
   void dispose() {
@@ -29,6 +38,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   }
 
   Future<void> _save() async {
+    // Mengosongkan error server sebelumnya agar bisa dicek ulang oleh server
+    _oldServerError = null;
+
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     setState(() {
@@ -44,10 +56,23 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
+      final message = e.toString().replaceFirst('Exception: ', '');
+
       setState(() {
         _saving = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+
+        if (message.toLowerCase().contains('password lama')) {
+          _oldServerError = message;
+          _error = null;
+        } else {
+          _error = message;
+        }
       });
+
+      // Jalankan ulang validasi field password lama 
+      if (_oldServerError != null) {
+        _oldKey.currentState?.validate();
+      }
     }
   }
 
@@ -56,9 +81,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     return PopScope(
       canPop: !_saving,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: _kBackgroundColor,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
+          backgroundColor: _kBackgroundColor,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
@@ -87,19 +112,25 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   child: Column(
                     children: [
                       _PasswordField(
+                        fieldKey: _oldKey,
                         controller: _oldC,
                         label: 'Password Lama',
                         action: TextInputAction.next,
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'Password lama wajib diisi'
-                            : null,
+                        // Menghapus error server saat user mengubah isi field
+                        onChanged: (_) => _oldServerError = null,
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return 'Password lama wajib diisi';
+                          }
+                          return _oldServerError;
+                        },
                       ),
                       const SizedBox(height: 16),
                       _PasswordField(
                         controller: _newC,
                         label: 'Password Baru',
                         action: TextInputAction.next,
-                        // Cek ulang konfirmasi setiap password baru berubah
+                        // Memeriksa ulang konfirmasi setiap password baru berubah
                         onChanged: (_) {
                           if (_confirmC.text.isNotEmpty) {
                             _confirmKey.currentState?.validate();
@@ -184,7 +215,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   }
 }
 
-// Field password dengan tombol lihat/sembunyikan dan border merah saat error
+// Field password dengan tombol lihat/sembunyikan
 class _PasswordField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
@@ -209,10 +240,26 @@ class _PasswordField extends StatefulWidget {
 class _PasswordFieldState extends State<_PasswordField> {
   bool _hidden = true;
 
+  // Menandai apakah field sedang error
+  bool _invalid = false;
+
   OutlineInputBorder _border(Color color, double width) => OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: color, width: width),
       );
+
+  String? _validate(String? value) {
+    final result = widget.validator(value);
+    final invalid = result != null;
+
+    if (invalid != _invalid) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _invalid = invalid);
+      });
+    }
+
+    return result;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -235,13 +282,13 @@ class _PasswordFieldState extends State<_PasswordField> {
           controller: widget.controller,
           obscureText: _hidden,
           textInputAction: widget.action,
-          validator: widget.validator,
+          validator: _validate,
           onChanged: widget.onChanged,
-          // Validasi langsung saat user mulai mengetik
+          // Validasi otomatis pada saat user mulai mengetik
           autovalidateMode: AutovalidateMode.onUserInteraction,
           decoration: InputDecoration(
             filled: true,
-            fillColor: const Color(0xFFEEE8F6),
+            fillColor: _invalid ? _kErrorFillColor : Colors.white,
             prefixIcon:
                 const Icon(Icons.lock_outline, color: AppColors.primary),
             suffixIcon: IconButton(
@@ -257,10 +304,9 @@ class _PasswordFieldState extends State<_PasswordField> {
               color: AppColors.error,
               fontSize: 12,
             ),
-            border: _border(Colors.transparent, 0),
-            enabledBorder: _border(Colors.transparent, 0),
+            border: _border(_kBorderColor, 1),
+            enabledBorder: _border(_kBorderColor, 1),
             focusedBorder: _border(AppColors.primary, 1.5),
-            // Frame merah saat tidak valid
             errorBorder: _border(AppColors.error, 1.5),
             focusedErrorBorder: _border(AppColors.error, 2),
           ),

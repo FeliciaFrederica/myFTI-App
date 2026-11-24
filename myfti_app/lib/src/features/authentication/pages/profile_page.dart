@@ -59,6 +59,14 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  // TODO: sambungkan ke halaman Ubah PIN Transaksi
+  void _openChangePin() {
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(builder: (_) => const ChangePinPage()),
+    // );
+  }
+
   void _openNotification() {
     Navigator.push(
       context,
@@ -67,13 +75,37 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showAbout() {
-    showAboutDialog(
+    showDialog<void>(
       context: context,
-      applicationName: 'myFTI',
-      applicationVersion: '1.0.0',
-      children: const [
-        Text('Aplikasi keuangan digital simulasi untuk mahasiswa FTI.'),
-      ],
+      builder: (ctx) => AlertDialog(
+        title: const Text('myFTI'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('1.0.0'),
+            SizedBox(height: 16),
+            Text('Aplikasi keuangan digital simulasi untuk mahasiswa FTI.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              showLicensePage(
+                context: context,
+                applicationName: 'myFTI',
+                applicationVersion: '1.0.0',
+              );
+            },
+            child: const Text('Lihat lisensi'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -174,7 +206,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       const SizedBox(height: 24),
 
-                      // ===== Akun =====
+                      // Akun
                       _sectionTitle('Akun'),
                       Card(
                         color: _kCardColor,
@@ -197,7 +229,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       const SizedBox(height: 24),
 
-                      // ===== Pengaturan =====
+                      // Pengaturan
                       _sectionTitle('Pengaturan'),
                       Card(
                         color: _kCardColor,
@@ -211,6 +243,9 @@ class _ProfilePageState extends State<ProfilePage> {
                             _menu(Icons.edit_outlined, 'Edit Profil',
                                 () => _openEditPage(user)),
                             const Divider(height: 1),
+                            _menu(Icons.pin_outlined, 'Ubah PIN Transaksi',
+                                _openChangePin),
+                            const Divider(height: 1),
                             _menu(Icons.notifications_outlined, 'Notifikasi',
                                 _openNotification),
                           ],
@@ -218,7 +253,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       const SizedBox(height: 24),
 
-                      // ===== Mengenai =====
+                      // Mengenai
                       _sectionTitle('Mengenai'),
                       Card(
                         color: _kCardColor,
@@ -238,8 +273,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
 
-                // Logout ikut ter-scroll, tapi kalau konten pendek
-                // tetap menempel di bagian bawah layar
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: Padding(

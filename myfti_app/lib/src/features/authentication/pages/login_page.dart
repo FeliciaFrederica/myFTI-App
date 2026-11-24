@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -5,6 +7,12 @@ import '../services/auth_service.dart';
 import '../widgets/auth_field.dart';
 import '../models/user_model.dart';
 import '../../../core/services/session_service.dart';
+
+// Batas percobaan login dan lama waktu tunggu
+const int _kMaxAttempts = 3;
+const int _kLockSeconds = 30;
+
+const Color _kErrorFillColor = Color(0xFFFDF4F4);
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,23 +28,94 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscure = true;
   bool _loading = false;
 
+  int _failedAttempts = 0;
+  int _remainingSeconds = 0;
+  Timer? _lockTimer;
+
+  // Pesan peringatan akan tampil di bawah field password
+  String? _loginError;
+
+  // Menyimpan isi terakhir field, untuk mendeteksi user mengetik ulang
+  String _lastEmail = '';
+  String _lastPass = '';
+
+  bool get _isLocked => _remainingSeconds > 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailC.addListener(_onInputChanged);
+    _passC.addListener(_onInputChanged);
+  }
+
   @override
   void dispose() {
+    _lockTimer?.cancel();
     _emailC.dispose();
     _passC.dispose();
     super.dispose();
   }
 
+  // Peringatan akan terhapus pada saat user mengubah email/password
+  void _onInputChanged() {
+    final changed = _emailC.text != _lastEmail || _passC.text != _lastPass;
+    _lastEmail = _emailC.text;
+    _lastPass = _passC.text;
+
+    if (changed && _loginError != null && !_isLocked) {
+      setState(() => _loginError = null);
+    }
+  }
+
+  // Mulai hitung mundur 30 detik, setelah selesai percobaan di-reset
+  void _startLockout() {
+    _lockTimer?.cancel();
+    setState(() {
+      _remainingSeconds = _kLockSeconds;
+      _loginError = 'Terlalu banyak percobaan. Silakan tunggu sebentar.';
+    });
+
+    _lockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      setState(() => _remainingSeconds--);
+
+      if (_remainingSeconds <= 0) {
+        timer.cancel();
+        setState(() {
+          _remainingSeconds = 0;
+          _failedAttempts = 0;
+          _loginError = null;
+        });
+      }
+    });
+  }
+
   Future<void> _submit() async {
+    if (_isLocked || _loading) return;
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _loginError = null;
+    });
 
     String? errorMessage;
+    bool loginFailed = false;
     UserModel? user;
 
     try {
       // untuk login harus memasukkan email dan password yang benar
-      await AuthService.login(_emailC.text.trim(), _passC.text);
+      try {
+        await AuthService.login(_emailC.text.trim(), _passC.text);
+      } catch (_) {
+        // Hanya kegagalan di proses login yang dihitung sebagai percobaan
+        loginFailed = true;
+        rethrow;
+      }
+
       user = await SessionService.getUser();
 
       if (user == null) {
@@ -50,18 +129,55 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = false);
 
     if (errorMessage == null && user != null) {
+      _failedAttempts = 0;
+
       final destination =
           user.role.toUpperCase() == 'MERCHANT' ? '/merchant' : '/home';
 
       Navigator.pushReplacementNamed(context, destination);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage ?? 'Login gagal'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      return;
     }
+
+    if (loginFailed) {
+      _failedAttempts++;
+
+      // Sudah 3x gagal maka login akan terkunci selama 30 detik
+      if (_failedAttempts >= _kMaxAttempts) {
+        _startLockout();
+        return;
+      }
+    }
+
+    setState(() => _loginError = errorMessage ?? 'Login gagal');
+  }
+
+  Widget _buildErrorBox(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _kErrorFillColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.error, width: 1.5),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: AppColors.error,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -160,15 +276,26 @@ class _LoginScreenState extends State<LoginScreen> {
                                 return null;
                               },
                             ),
+
+                            // Peringatan login gagal / terkunci
+                            if (_loginError != null) ...[
+                              const SizedBox(height: 12),
+                              _buildErrorBox(_loginError!),
+                            ],
+
                             const SizedBox(height: 28),
                             SizedBox(
                               width: double.infinity,
                               height: 52,
                               child: ElevatedButton(
-                                onPressed: _loading ? null : _submit,
+                                // Nonaktif saat loading atau sedang terkunci
+                                onPressed:
+                                    (_loading || _isLocked) ? null : _submit,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor: AppColors.primary,
+                                  disabledBackgroundColor: Colors.white60,
+                                  disabledForegroundColor: AppColors.primary,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14),
                                   ),
@@ -181,9 +308,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                           strokeWidth: 2.5,
                                         ),
                                       )
-                                    : const Text(
-                                        'Masuk',
-                                        style: TextStyle(
+                                    : Text(
+                                        _isLocked
+                                            ? 'Coba lagi dalam $_remainingSeconds detik'
+                                            : 'Masuk',
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
                                         ),

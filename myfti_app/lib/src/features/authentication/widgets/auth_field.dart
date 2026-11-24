@@ -47,7 +47,6 @@ class AuthField extends StatelessWidget {
   Widget build(BuildContext context) {
     final labelColor = onLight ? AppColors.text : Colors.white;
 
-    // Warna teks error dan warna frame merah
     final errorTextColor = onLight ? AppColors.error : const Color(0xFFFFCDD2);
     final errorBorderColor =
         onLight ? AppColors.error : const Color(0xFFFF5252);

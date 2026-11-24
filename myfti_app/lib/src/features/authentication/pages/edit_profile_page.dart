@@ -142,7 +142,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       MaterialPageRoute(builder: (_) => const ChangePasswordPage()),
     );
     if (ok == true && mounted) {
-      // Notifikasi tampil di bagian atas halaman
       TopNotice.show(context, 'Password berhasil diubah', success: true);
     }
   }
@@ -274,8 +273,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       Card(
                         color: _kCardColor,
                         elevation: 0,
-                        // Hilangkan margin bawaan Card (4px) supaya lebarnya
-                        // sama dengan field Nama dan Email
                         margin: EdgeInsets.zero,
                         clipBehavior: Clip.antiAlias,
                         shape: RoundedRectangleBorder(
