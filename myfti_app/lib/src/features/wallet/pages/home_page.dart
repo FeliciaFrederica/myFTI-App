@@ -280,94 +280,191 @@ class _HomePageState extends State<HomePage> {
 
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: primaryPurple,
             borderRadius: BorderRadius.circular(24),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.account_balance_wallet_outlined,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Dompet Digital myFTI',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              const Text(
-                'Saldo Tersedia',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        balanceText,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: ShaderMask(
+                      shaderCallback: (Rect bounds) {
+                        return const LinearGradient(
+                          begin: Alignment.centerRight,
+                          end: Alignment.centerLeft,
+                          colors: [
+                            Colors.white,       
+                            Colors.white54,    
+                            Colors.transparent, 
+                          ],
+                          stops: [0.0, 0.42, 0.72],
+                        ).createShader(bounds);
+                      },
+                      blendMode: BlendMode.dstIn,
+                      child: Opacity(
+                        opacity: 0.16,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            _buildCloudItem(
+                              right: -25,
+                              top: -20,
+                              width: 170,
+                              angle: -0.15,
+                            ),
+                            _buildCloudItem(
+                              right: -15,
+                              bottom: -25,
+                              width: 150,
+                              angle: 0.2,
+                              flipX: true,
+                            ),
+                            _buildCloudItem(
+                              right: 110,
+                              top: 10,
+                              width: 105,
+                              angle: 0.25,
+                              flipX: true,
+                            ),
+                            _buildCloudItem(
+                              right: 95,
+                              bottom: 5,
+                              width: 120,
+                              angle: -0.2,
+                            ),
+                            _buildCloudItem(
+                              right: 185,
+                              top: 45,
+                              width: 85,
+                              angle: -0.35,
+                              flipX: true,
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
+                ),
 
-                  if (snapshot.hasData)
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _isBalanceVisible = !_isBalanceVisible;
-                        });
-                      },
-                      icon: Icon(
-                        _isBalanceVisible
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: Colors.white,
+                // Saldo
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.account_balance_wallet_outlined,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Dompet Digital myFTI',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
-                      tooltip: _isBalanceVisible
-                          ? 'Sembunyikan saldo'
-                          : 'Tampilkan saldo',
-                    ),
-                ],
-              ),
-
-              if (snapshot.hasError)
-                TextButton(
-                  onPressed: _refreshData,
-                  child: const Text(
-                    'Coba Lagi',
-                    style: TextStyle(color: Colors.white),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Saldo Tersedia',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                balanceText,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (snapshot.hasData)
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _isBalanceVisible = !_isBalanceVisible;
+                                });
+                              },
+                              icon: Icon(
+                                _isBalanceVisible
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: Colors.white,
+                              ),
+                              tooltip: _isBalanceVisible
+                                  ? 'Sembunyikan saldo'
+                                  : 'Tampilkan saldo',
+                            ),
+                        ],
+                      ),
+                      if (snapshot.hasError)
+                        TextButton(
+                          onPressed: _refreshData,
+                          child: const Text(
+                            'Coba Lagi',
+                            style: TextStyle(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  // widget awan megamendung
+  Widget _buildCloudItem({
+    double? top,
+    double? bottom,
+    double? right,
+    double? left,
+    required double width,
+    double angle = 0,
+    bool flipX = false,
+  }) {
+    return Positioned(
+      top: top,
+      bottom: bottom,
+      right: right,
+      left: left,
+      child: Transform.rotate(
+        angle: angle,
+        child: Transform.flip(
+          flipX: flipX,
+          child: Image.asset(
+            'assets/images/mega_mendung.png',
+            width: width,
+            fit: BoxFit.contain,
+            color: Colors.white, 
+          ),
+        ),
+      ),
     );
   }
 
