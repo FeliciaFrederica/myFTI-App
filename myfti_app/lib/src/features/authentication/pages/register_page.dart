@@ -190,8 +190,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       _obscure,
                                       () =>
                                           setState(() => _obscure = !_obscure)),
-                                  // Disamakan dengan registerSchema di backend:
-                                  // min 8 karakter, ada huruf, ada angka
+                                  // password minimal 8 karakter
                                   validator: (v) {
                                     if (v == null || v.isEmpty) {
                                       return 'Password wajib diisi';
@@ -261,7 +260,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ),
                                 ),
 
-                                // Tepat di bawah tombol (sama seperti login)
                                 const SizedBox(height: 16),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -292,7 +290,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 },
               ),
 
-              // Tombol back di pojok kiri atas
               Positioned(
                 top: 4,
                 left: 8,

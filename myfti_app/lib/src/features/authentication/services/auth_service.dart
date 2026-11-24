@@ -28,7 +28,7 @@ class AuthService {
     }
   }
 
-  // ---------- helper internal ----------
+  // helper internal
 
   static Map<String, dynamic> _decode(http.Response res) {
     try {
@@ -39,14 +39,13 @@ class AuthService {
     }
   }
 
-  // Ambil pesan error dari server, atau pakai pesan cadangan.
+  // Untuk mengambil pesan error dari server
   static String _message(Map<String, dynamic> body, String fallback) {
     final msg = body['message'] ?? body['error'];
     return msg == null ? fallback : msg.toString();
   }
 
-  // Ambil objek user dari berbagai kemungkinan bentuk respons:
-  // {data:{user:{...}}}, {data:{...}}, atau {...}
+  // Mengambil objek user dari berbagai bentuk respons server.
   static Map<String, dynamic> _userMap(Map<String, dynamic> body) {
     final data = body['data'];
     if (data is Map<String, dynamic>) {
@@ -85,8 +84,8 @@ class AuthService {
 
   // ---------- API ----------
 
-  // Register akun baru. Tidak otomatis login; user diarahkan ke halaman login.
-  // Wallet ID dan saldo awal (Rp 0) dibuat oleh backend.
+  // Pada saat register akun baru, user tidak akan otomatis login.
+  // Wallet ID dan saldo awal otomatis (Rp 0).
   static Future<void> register({
     required String name,
     required String nim,
@@ -139,17 +138,17 @@ class AuthService {
     );
   }
 
-  // Logout: beri tahu server (jika bisa), lalu hapus sesi lokal.
+  // Logout
   static Future<void> logout() async {
     try {
       await _send('POST', '/logout', auth: true).timeout(_timeout);
     } catch (_) {
-      // tetap hapus sesi lokal walau server tidak terjangkau
+      // tetap hapus sesi lokal walau server tidak dapat di jangkau
     }
     await SessionService.clear();
   }
 
-  // Ambil data profil user yang sedang login dari server.
+  // Mengambil data profil user yang sedang login dari server.
   static Future<UserModel> getProfile() async {
     final res = await _guard(_send('GET', '/auth/profile', auth: true));
     final body = _decode(res);
@@ -167,8 +166,8 @@ class AuthService {
     return user;
   }
 
-  // Perbarui nama dan email user yang sedang login.
-  // Nama boleh lebih dari satu kata (contoh: "Vianlienra Hung").
+  // Memperbarui nama dan email user yang sedang login.
+  // Nama user bisa lebih dari satu kata (contoh: "Vianlienra Hung").
   static Future<void> updateProfile({
     required String name,
     required String email,
@@ -191,9 +190,7 @@ class AuthService {
       throw Exception(_message(body, 'Gagal memperbarui profil'));
     }
 
-    // Sinkronkan data user di SessionService. Kalau bentuk respons berbeda,
-    // abaikan saja: data sudah tersimpan di server dan halaman profil
-    // akan memuat ulang lewat getProfile().
+    // Memperbarui data user di SessionService.
     try {
       await SessionService.saveUser(UserModel.fromJson(_userMap(body)));
     } catch (e) {
@@ -201,7 +198,62 @@ class AuthService {
     }
   }
 
-  // Dipakai splash screen untuk menentukan ke login atau home.
+  // Mengubah foto profil, kirim null untuk menghapus foto.
+  // Isi avatar berupa data URL base64
+  static Future<void> updateAvatar(String? avatar) async {
+    final res = await _guard(
+      _send(
+        'PUT',
+        '/auth/profile/avatar',
+        body: {'avatar': avatar},
+        auth: true,
+      ),
+    );
+    final body = _decode(res);
+
+    if (res.statusCode == 401) {
+      await SessionService.clear();
+      throw Exception('Sesi berakhir, silakan login lagi');
+    }
+    if (res.statusCode != 200) {
+      throw Exception(_message(body, 'Gagal memperbarui foto profil'));
+    }
+
+    try {
+      await SessionService.saveUser(UserModel.fromJson(_userMap(body)));
+    } catch (e) {
+      debugPrint('UPDATE AVATAR: gagal sinkron sesi lokal: $e');
+    }
+  }
+
+  // Mengubah password user yang sedang login
+  static Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final res = await _guard(
+      _send(
+        'PUT',
+        '/auth/password',
+        body: {
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        },
+        auth: true,
+      ),
+    );
+    final body = _decode(res);
+
+    if (res.statusCode == 401) {
+      await SessionService.clear();
+      throw Exception('Sesi berakhir, silakan login lagi');
+    }
+    if (res.statusCode != 200) {
+      throw Exception(_message(body, 'Gagal mengubah password'));
+    }
+  }
+
+  // Splash screen digunakan untuk memeriksa apakah user sudah login atau belum.
   static Future<bool> isLoggedIn() async {
     final token = await SessionService.getToken();
     return token != null && token.isNotEmpty;

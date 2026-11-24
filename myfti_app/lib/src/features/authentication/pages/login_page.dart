@@ -35,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
     UserModel? user;
 
     try {
-      // login menerima 2 argumen posisional: email, password
+      // untuk login harus memasukkan email dan password yang benar
       await AuthService.login(_emailC.text.trim(), _passC.text);
       user = await SessionService.getUser();
 

@@ -11,8 +11,8 @@ class AuthField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final String? Function(String?)? validator;
 
-  /// true  = dipakai di latar terang (dialog/kartu)
-  /// false = dipakai di latar ungu (login/register), default
+  // true  = akan dipakai ketika latar terang 
+  // false = akan dipakai ketika latar ungu, default aplikasi
   final bool onLight;
 
   const AuthField({

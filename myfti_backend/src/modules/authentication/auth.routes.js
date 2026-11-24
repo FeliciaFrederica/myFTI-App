@@ -22,5 +22,7 @@ router.post('/login', authLimiter, validate(loginSchema), ctrl.login);
 router.post('/logout', auth, ctrl.logout);
 router.get('/profile', auth, ctrl.getProfile);
 router.put('/profile', auth, validate(updateProfileSchema), ctrl.updateProfile);
+router.put('/profile/avatar', auth, ctrl.updateAvatar);
+router.put('/password', auth, ctrl.changePassword);
 
 module.exports = router;

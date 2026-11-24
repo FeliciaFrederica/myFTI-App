@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../../../core/theme/app_theme.dart';
 import '../services/auth_service.dart';
-import '../widgets/auth_field.dart';
+import '../../notification/pages/notification_page.dart';
+import 'edit_profile_page.dart';
+import '../widgets/user_avatar.dart';
 
 const Color _kCardColor = Color(0xFFF3EEFC);
+
+const double _kNavBarSpace = 100;
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -43,16 +47,48 @@ class _ProfilePageState extends State<ProfilePage> {
     ));
   }
 
-  Future<void> _openEditDialog(UserModel user) async {
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (_) => _EditProfileDialog(user: user),
+  // Terhubung ke halaman edit profil, data akan dimuat ulang setelah berhasil menyimpan perubahan data
+  Future<void> _openEditPage(UserModel user) async {
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => EditProfilePage(user: user)),
     );
 
     if (saved == true) {
       _reload();
       _showSnack('Profil berhasil diperbarui', success: true);
     }
+  }
+
+  void _openNotification() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NotificationPage()),
+    );
+  }
+
+  Future<void> _confirmLogout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Yakin ingin keluar dari akun myFTI?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Logout',
+                  style: TextStyle(color: AppColors.error))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    await AuthService.logout();
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   @override
@@ -108,55 +144,81 @@ class _ProfilePageState extends State<ProfilePage> {
             );
           }
           final user = snap.data!;
-          return RefreshIndicator(
-            onRefresh: _reload,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              children: [
-                Center(
-                  child: CircleAvatar(
-                    radius: 48,
-                    backgroundColor: AppColors.primary,
-                    child: Text(user.initials,
-                        style: const TextStyle(
-                            fontSize: 32,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Center(
-                  child: Text(user.name,
-                      style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.text)),
-                ),
-                const SizedBox(height: 24),
-                Card(
-                  color: _kCardColor,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                  child: Column(
+
+          return Column(
+            children: [
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _reload,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(20),
                     children: [
-                      _info(Icons.badge_outlined, 'NIM', user.nim),
-                      const Divider(height: 1),
-                      _info(Icons.email_outlined, 'Email', user.email),
-                      const Divider(height: 1),
-                      _info(Icons.account_balance_wallet_outlined, 'Wallet ID',
-                          user.walletId.isEmpty ? '-' : user.walletId),
+                      Center(
+                        child: UserAvatar(
+                          initials: user.initials,
+                          avatar: user.avatar,
+                          radius: 48,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: Text(user.name.toUpperCase(),
+                            style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.text)),
+                      ),
+                      const SizedBox(height: 24),
+                      Card(
+                        color: _kCardColor,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        child: Column(
+                          children: [
+                            _info(Icons.badge_outlined, 'NIM', user.nim),
+                            const Divider(height: 1),
+                            _info(Icons.email_outlined, 'Email', user.email),
+                            const Divider(height: 1),
+                            _info(
+                                Icons.account_balance_wallet_outlined,
+                                'Wallet ID',
+                                user.walletId.isEmpty ? '-' : user.walletId),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Menu Edit Profil dan Notifikasi
+                      Card(
+                        color: _kCardColor,
+                        elevation: 0,
+                        clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        child: Column(
+                          children: [
+                            _menu(Icons.edit_outlined, 'Edit Profil',
+                                () => _openEditPage(user)),
+                            const Divider(height: 1),
+                            _menu(Icons.notifications_outlined, 'Notifikasi',
+                                _openNotification),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
-                SizedBox(
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, _kNavBarSpace),
+                child: SizedBox(
+                  width: double.infinity,
                   height: 50,
                   child: ElevatedButton.icon(
-                    onPressed: () => _openEditDialog(user),
-                    icon: const Icon(Icons.edit),
-                    label: const Text('Edit Profil'),
+                    onPressed: _confirmLogout,
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Logout'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -165,8 +227,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),
@@ -183,184 +245,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 color: AppColors.text,
                 fontWeight: FontWeight.w500)),
       );
-}
 
-// Pop up edit profil.
-class _EditProfileDialog extends StatefulWidget {
-  final UserModel user;
-  const _EditProfileDialog({required this.user});
-
-  @override
-  State<_EditProfileDialog> createState() => _EditProfileDialogState();
-}
-
-class _EditProfileDialogState extends State<_EditProfileDialog> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nameC;
-  late final TextEditingController _emailC;
-  bool _saving = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameC = TextEditingController(text: widget.user.name);
-    _emailC = TextEditingController(text: widget.user.email);
-  }
-
-  @override
-  void dispose() {
-    _nameC.dispose();
-    _emailC.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-
-    try {
-      await AuthService.updateProfile(
-        name: _nameC.text.trim(),
-        email: _emailC.text.trim(),
+  Widget _menu(IconData icon, String title, VoidCallback onTap) => ListTile(
+        leading: Icon(icon, color: AppColors.primary),
+        title: Text(title),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
       );
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      // Dialog tidak bisa ditutup saat sedang menyimpan
-      canPop: !_saving,
-      child: Dialog(
-        backgroundColor: _kCardColor,
-        surfaceTintColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Edit Profil',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.text,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                AuthField(
-                  controller: _nameC,
-                  label: 'Nama Lengkap',
-                  icon: Icons.person_outline,
-                  onLight: true,
-                  textInputAction: TextInputAction.next,
-                  validator: (v) => (v == null || v.trim().length < 3)
-                      ? 'Nama minimal 3 karakter'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                AuthField(
-                  controller: _emailC,
-                  label: 'Email',
-                  icon: Icons.email_outlined,
-                  onLight: true,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Email wajib diisi';
-                    }
-                    final ok = RegExp(r'^[\w\.\-]+@[\w\-]+\.[\w\.\-]+$')
-                        .hasMatch(v.trim());
-                    return ok ? null : 'Format email tidak valid';
-                  },
-                ),
-
-                // Error dari server tampil di dalam dialog
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _error!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.error,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 24),
-
-                // Tombol Simpan (atas, penuh)
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _saving ? null : _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: _saving
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Simpan',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: TextButton(
-                    onPressed: _saving ? null : () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.grey,
-                      disabledForegroundColor: Colors.grey.shade400,
-                    ),
-                    child: const Text(
-                      'Batal',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
