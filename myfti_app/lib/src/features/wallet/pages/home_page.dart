@@ -9,7 +9,9 @@ import '../../notification/pages/notification_page.dart';
 import '../../summary/pages/financial_summary_page.dart';
 import '../../authentication/models/user_model.dart';
 import '../../authentication/services/auth_service.dart';
+import '../../authentication/widgets/user_avatar.dart';
 import '../../transaction/pages/transaction_history_page.dart';
+
 class HomePage extends StatefulWidget {
   final VoidCallback? onProfileTap;
 
@@ -63,7 +65,7 @@ class _HomePageState extends State<HomePage> {
         _userFuture,
       ]);
     } catch (_) {
-      // Error 
+      // Error
     }
   }
 
@@ -92,6 +94,54 @@ class _HomePageState extends State<HomePage> {
     return '$day $month $year • $hour:$minute';
   }
 
+  Future<void> _confirmLogout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Yakin ingin keluar dari akun myFTI?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Logout',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    await AuthService.logout();
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
+
+  // Profil user
+  Widget _buildHeaderAvatar(UserModel? user) {
+    if (user != null) {
+      return UserAvatar(
+        initials: user.initials,
+        avatar: user.avatar,
+        radius: 20,
+      );
+    }
+
+    return const CircleAvatar(
+      radius: 20,
+      backgroundColor: Color(0xFFEDE7F6),
+      child: Icon(
+        Icons.person,
+        color: primaryPurple,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -114,54 +164,49 @@ class _HomePageState extends State<HomePage> {
                       child: InkWell(
                         onTap: widget.onProfileTap,
                         borderRadius: BorderRadius.circular(30),
-                        child: Row(
-                          children: [
-                            const CircleAvatar(
-                              backgroundColor: Color(0xFFEDE7F6),
-                              child: Icon(
-                                Icons.person,
-                                color: primaryPurple,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Selamat Datang,',
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                  FutureBuilder<UserModel>(
-                                    future: _userFuture,
-                                    builder: (context, snapshot) {
-                                      if (snapshot.hasError) {
-                                        return const Text(
-                                          'Mahasiswa FTI!',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: textColor,
-                                          ),
-                                        );
-                                      }
+                        child: FutureBuilder<UserModel>(
+                          future: _userFuture,
+                          builder: (context, snapshot) {
+                            final user = snapshot.data;
 
-                                      return Text(
-                                        snapshot.hasData
-                                            ? '${snapshot.data!.name}!'
-                                            : 'Memuat profil...',
+                            final String name;
+                            if (snapshot.hasError) {
+                              name = 'Mahasiswa FTI!';
+                            } else if (user != null) {
+                              name = '${user.name}!';
+                            } else {
+                              name = 'Memuat profil...';
+                            }
+
+                            return Row(
+                              children: [
+                                _buildHeaderAvatar(user),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Selamat Datang,',
+                                        style: TextStyle(color: Colors.grey),
+                                      ),
+                                      Text(
+                                        name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
                                           color: textColor,
                                         ),
-                                      );
-                                    },
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          ],
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -176,6 +221,14 @@ class _HomePageState extends State<HomePage> {
                       },
                       icon: const Icon(
                         Icons.notifications_none,
+                        color: primaryPurple,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _confirmLogout,
+                      tooltip: 'Logout',
+                      icon: const Icon(
+                        Icons.logout,
                         color: primaryPurple,
                       ),
                     ),
@@ -311,9 +364,9 @@ class _HomePageState extends State<HomePage> {
                           begin: Alignment.centerRight,
                           end: Alignment.centerLeft,
                           colors: [
-                            Colors.white,       
-                            Colors.white54,    
-                            Colors.transparent, 
+                            Colors.white,
+                            Colors.white54,
+                            Colors.transparent,
                           ],
                           stops: [0.0, 0.42, 0.72],
                         ).createShader(bounds);
@@ -476,7 +529,7 @@ class _HomePageState extends State<HomePage> {
             'assets/images/mega_mendung.png',
             width: width,
             fit: BoxFit.contain,
-            color: Colors.white, 
+            color: Colors.white,
           ),
         ),
       ),
@@ -677,9 +730,7 @@ class _HomePageState extends State<HomePage> {
             final icon = _getTransactionIcon(transaction.type);
 
             final amount = _formatRupiah(transaction.amount);
-            final displayAmount = isIncoming
-                ? '+ $amount'
-                : '- $amount';
+            final displayAmount = isIncoming ? '+ $amount' : '- $amount';
 
             return Card(
               color: Colors.white,
