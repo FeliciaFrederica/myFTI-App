@@ -46,7 +46,7 @@ class _MainNavigationState extends State<MainNavigation> {
   static const Color backgroundColor = Color(0xFFF8F6FC);
 
   late final List<Widget> _pages = [
-    HomePage(),
+    HomePage(onProfileTap: () => _switchTab(3)),
     MyWalletPage(key: _walletKey, onHistoryTap: () => _switchTab(2)),
     TransactionHistoryPage(),
     ProfilePage(),
@@ -110,10 +110,10 @@ class _MainNavigationState extends State<MainNavigation> {
                             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.45),
+                                color: const Color(0xFFEDE7F6).withValues(alpha: 0.45),
                                 borderRadius: BorderRadius.circular(26),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.5),
+                                  color: const Color(0xFFD1C4E9).withValues(alpha: 0.65),
                                   width: 1,
                                 ),
                               ),
@@ -126,7 +126,7 @@ class _MainNavigationState extends State<MainNavigation> {
                                       borderRadius: BorderRadius.circular(26),
                                       onTap: () => _switchTab(index),
                                       child: Padding(
-                                        padding: const EdgeInsets.only(top: 23),
+                                        padding: const EdgeInsets.only(top: 2),
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
