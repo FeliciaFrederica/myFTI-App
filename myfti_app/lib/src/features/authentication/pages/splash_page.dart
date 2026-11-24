@@ -73,7 +73,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1)),
             const SizedBox(height: 6),
-            const Text('Digital Wallet untuk Mahasiswa FTI',
+            const Text('Dompet Digital untuk Mahasiswa FTI',
                 style: TextStyle(color: Colors.white70)),
             const SizedBox(height: 40),
             const CircularProgressIndicator(color: Colors.white),

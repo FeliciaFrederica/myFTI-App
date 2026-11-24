@@ -1,4 +1,4 @@
-const authService = require('../services/auth.service');
+const authService = require('../authentication/auth.service');
 
 const wrap = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next);
