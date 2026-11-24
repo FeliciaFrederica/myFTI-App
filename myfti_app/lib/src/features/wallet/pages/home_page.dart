@@ -90,14 +90,15 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
+        bottom: false,
         child: RefreshIndicator(
           color: primaryPurple,
           onRefresh: _refreshData,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 130),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
