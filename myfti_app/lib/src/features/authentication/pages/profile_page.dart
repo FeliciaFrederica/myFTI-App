@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/top_notice.dart';
 import '../services/auth_service.dart';
 import '../../notification/pages/notification_page.dart';
 import 'edit_profile_page.dart';
@@ -39,12 +40,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
   String _errorText(Object e) => e.toString().replaceFirst('Exception: ', '');
 
-  void _showSnack(String message, {required bool success}) {
+  // Notifikasi tampil di bagian atas halaman
+  void _showNotice(String message, {required bool success}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: success ? AppColors.success : AppColors.error,
-    ));
+    TopNotice.show(context, message, success: success);
   }
 
   // Terhubung ke halaman edit profil, data akan dimuat ulang setelah berhasil menyimpan perubahan data
@@ -56,7 +55,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (saved == true) {
       _reload();
-      _showSnack('Profil berhasil diperbarui', success: true);
+      _showNotice('Profil berhasil diperbarui', success: true);
     }
   }
 
@@ -64,6 +63,17 @@ class _ProfilePageState extends State<ProfilePage> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const NotificationPage()),
+    );
+  }
+
+  void _showAbout() {
+    showAboutDialog(
+      context: context,
+      applicationName: 'myFTI',
+      applicationVersion: '1.0.0',
+      children: const [
+        Text('Aplikasi keuangan digital simulasi untuk mahasiswa FTI.'),
+      ],
     );
   }
 
@@ -111,13 +121,6 @@ class _ProfilePageState extends State<ProfilePage> {
             color: AppColors.text,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: AppColors.primary),
-            onPressed: () => Navigator.pushNamed(context, '/settings'),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: FutureBuilder<UserModel>(
         future: _future,
@@ -145,15 +148,15 @@ class _ProfilePageState extends State<ProfilePage> {
           }
           final user = snap.data!;
 
-          return Column(
-            children: [
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _reload,
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(20),
-                    children: [
+          return RefreshIndicator(
+            onRefresh: _reload,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
                       Center(
                         child: UserAvatar(
                           initials: user.initials,
@@ -170,9 +173,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                 color: AppColors.text)),
                       ),
                       const SizedBox(height: 24),
+
+                      // ===== Akun =====
+                      _sectionTitle('Akun'),
                       Card(
                         color: _kCardColor,
                         elevation: 0,
+                        margin: EdgeInsets.zero,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                         child: Column(
@@ -188,11 +195,14 @@ class _ProfilePageState extends State<ProfilePage> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      // Menu Edit Profil dan Notifikasi
+                      const SizedBox(height: 24),
+
+                      // ===== Pengaturan =====
+                      _sectionTitle('Pengaturan'),
                       Card(
                         color: _kCardColor,
                         elevation: 0,
+                        margin: EdgeInsets.zero,
                         clipBehavior: Clip.antiAlias,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
@@ -206,34 +216,80 @@ class _ProfilePageState extends State<ProfilePage> {
                           ],
                         ),
                       ),
-                    ],
+                      const SizedBox(height: 24),
+
+                      // ===== Mengenai =====
+                      _sectionTitle('Mengenai'),
+                      Card(
+                        color: _kCardColor,
+                        elevation: 0,
+                        margin: EdgeInsets.zero,
+                        clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        child: _menu(
+                          Icons.info_outline,
+                          'Tentang Aplikasi',
+                          _showAbout,
+                          subtitle: 'myFTI v1.0.0',
+                        ),
+                      ),
+                    ]),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, _kNavBarSpace),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: _confirmLogout,
-                    icon: const Icon(Icons.logout),
-                    label: const Text('Logout'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
+
+                // Logout ikut ter-scroll, tapi kalau konten pendek
+                // tetap menempel di bagian bawah layar
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.fromLTRB(20, 24, 20, _kNavBarSpace),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton.icon(
+                                onPressed: _confirmLogout,
+                                icon: const Icon(Icons.logout),
+                                label: const Text('Logout'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
     );
   }
+
+  Widget _sectionTitle(String text) => Padding(
+        padding: const EdgeInsets.only(left: 4, bottom: 8),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.text,
+          ),
+        ),
+      );
 
   Widget _info(IconData icon, String title, String value) => ListTile(
         leading: Icon(icon, color: AppColors.primary),
@@ -246,9 +302,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 fontWeight: FontWeight.w500)),
       );
 
-  Widget _menu(IconData icon, String title, VoidCallback onTap) => ListTile(
+  Widget _menu(IconData icon, String title, VoidCallback onTap,
+          {String? subtitle}) =>
+      ListTile(
         leading: Icon(icon, color: AppColors.primary),
         title: Text(title),
+        subtitle: subtitle == null ? null : Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       );

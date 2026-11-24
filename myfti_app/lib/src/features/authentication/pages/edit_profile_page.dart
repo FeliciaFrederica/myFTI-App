@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../models/user_model.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/top_notice.dart';
 import '../services/auth_service.dart';
 import '../widgets/auth_field.dart';
 import '../widgets/user_avatar.dart';
@@ -29,7 +30,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   bool _saving = false;
   String? _error;
 
-  // Foto baru yang dipilih (belum dikirim ke server)
+  // Foto baru yang dipilih (belum dikirim ke server) dan status hapus foto
   Uint8List? _newBytes;
   bool _removeAvatar = false;
 
@@ -39,7 +40,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   bool get _avatarChanged => _newBytes != null || _removeAvatar;
 
-  // Tombol simpan hanya akan aktif kalau ada data yang berubah
+  // Tombol simpan hanya aktif kalau ada data yang berubah
   bool get _changed => _profileChanged || _avatarChanged;
 
   bool get _hasPhoto =>
@@ -66,7 +67,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      // Ukuran dikecilkan dulu supaya lebih ringan saat dikirim dan disimpan ke server
+      // Ukuran dikecilkan dulu supaya ringan saat dikirim dan disimpan
       final file = await _picker.pickImage(
         source: source,
         maxWidth: 512,
@@ -141,10 +142,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       MaterialPageRoute(builder: (_) => const ChangePasswordPage()),
     );
     if (ok == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Password berhasil diubah'),
-        backgroundColor: AppColors.success,
-      ));
+      // Notifikasi tampil di bagian atas halaman
+      TopNotice.show(context, 'Password berhasil diubah', success: true);
     }
   }
 
@@ -157,6 +156,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     });
 
     try {
+      // Foto dikirim dulu kalau berubah, lalu nama dan email
       if (_avatarChanged) {
         final data = _removeAvatar
             ? null
@@ -182,7 +182,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      // User tidak bisa kembali ke halaman sebelumnya pada saat sedang proses menyimpan
+      // Tidak bisa kembali saat sedang menyimpan
       canPop: !_saving,
       child: Scaffold(
         backgroundColor: AppColors.background,
@@ -274,10 +274,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       Card(
                         color: _kCardColor,
                         elevation: 0,
+                        // Hilangkan margin bawaan Card (4px) supaya lebarnya
+                        // sama dengan field Nama dan Email
+                        margin: EdgeInsets.zero,
                         clipBehavior: Clip.antiAlias,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                         child: ListTile(
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 16),
                           leading: const Icon(Icons.lock_outline,
                               color: AppColors.primary),
                           title: const Text('Ubah Password'),

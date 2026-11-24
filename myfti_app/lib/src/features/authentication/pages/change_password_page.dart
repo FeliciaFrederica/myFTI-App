@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../services/auth_service.dart';
 
+const int _kMinPassword = 8;
+
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
 
@@ -11,6 +13,7 @@ class ChangePasswordPage extends StatefulWidget {
 
 class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final _formKey = GlobalKey<FormState>();
+  final _confirmKey = GlobalKey<FormFieldState<String>>();
   final _oldC = TextEditingController();
   final _newC = TextEditingController();
   final _confirmC = TextEditingController();
@@ -96,9 +99,15 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                         controller: _newC,
                         label: 'Password Baru',
                         action: TextInputAction.next,
+                        // Cek ulang konfirmasi setiap password baru berubah
+                        onChanged: (_) {
+                          if (_confirmC.text.isNotEmpty) {
+                            _confirmKey.currentState?.validate();
+                          }
+                        },
                         validator: (v) {
-                          if (v == null || v.length < 6) {
-                            return 'Password minimal 6 karakter';
+                          if (v == null || v.length < _kMinPassword) {
+                            return 'Password minimal $_kMinPassword karakter';
                           }
                           if (v == _oldC.text) {
                             return 'Password baru harus berbeda';
@@ -108,6 +117,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       ),
                       const SizedBox(height: 16),
                       _PasswordField(
+                        fieldKey: _confirmKey,
                         controller: _confirmC,
                         label: 'Konfirmasi Password Baru',
                         action: TextInputAction.done,
@@ -174,18 +184,22 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   }
 }
 
-// Field password
+// Field password dengan tombol lihat/sembunyikan dan border merah saat error
 class _PasswordField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
   final TextInputAction action;
   final String? Function(String?) validator;
+  final ValueChanged<String>? onChanged;
+  final GlobalKey<FormFieldState<String>>? fieldKey;
 
   const _PasswordField({
     required this.controller,
     required this.label,
     required this.action,
     required this.validator,
+    this.onChanged,
+    this.fieldKey,
   });
 
   @override
@@ -194,6 +208,11 @@ class _PasswordField extends StatefulWidget {
 
 class _PasswordFieldState extends State<_PasswordField> {
   bool _hidden = true;
+
+  OutlineInputBorder _border(Color color, double width) => OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: color, width: width),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -212,10 +231,14 @@ class _PasswordFieldState extends State<_PasswordField> {
           ),
         ),
         TextFormField(
+          key: widget.fieldKey,
           controller: widget.controller,
           obscureText: _hidden,
           textInputAction: widget.action,
           validator: widget.validator,
+          onChanged: widget.onChanged,
+          // Validasi langsung saat user mulai mengetik
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFFEEE8F6),
@@ -223,15 +246,23 @@ class _PasswordFieldState extends State<_PasswordField> {
                 const Icon(Icons.lock_outline, color: AppColors.primary),
             suffixIcon: IconButton(
               icon: Icon(
-                _hidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                _hidden
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
                 color: AppColors.secondary,
               ),
               onPressed: () => setState(() => _hidden = !_hidden),
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
+            errorStyle: const TextStyle(
+              color: AppColors.error,
+              fontSize: 12,
             ),
+            border: _border(Colors.transparent, 0),
+            enabledBorder: _border(Colors.transparent, 0),
+            focusedBorder: _border(AppColors.primary, 1.5),
+            // Frame merah saat tidak valid
+            errorBorder: _border(AppColors.error, 1.5),
+            focusedErrorBorder: _border(AppColors.error, 2),
           ),
         ),
       ],

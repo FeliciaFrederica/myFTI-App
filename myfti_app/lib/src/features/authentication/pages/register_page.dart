@@ -3,6 +3,9 @@ import '../../../core/theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../widgets/auth_field.dart';
 
+const int _kMinName = 4;
+const int _kMinPassword = 8;
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -12,6 +15,7 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _confirmKey = GlobalKey<FormFieldState<String>>();
   final _nameC = TextEditingController();
   final _nimC = TextEditingController();
   final _emailC = TextEditingController();
@@ -126,22 +130,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 const SizedBox(height: 28),
 
+                                // Nama Lengkap
                                 AuthField(
                                   controller: _nameC,
                                   label: 'Nama Lengkap',
                                   icon: Icons.person_outline,
                                   textInputAction: TextInputAction.next,
                                   validator: (v) {
-                                    if (v == null || v.trim().isEmpty) {
-                                      return 'Nama wajib diisi';
-                                    }
-                                    if (v.trim().length < 3) {
-                                      return 'Nama minimal 3 karakter';
+                                    if (v == null ||
+                                        v.trim().length < _kMinName) {
+                                      return 'Nama lengkap minimal $_kMinName karakter';
                                     }
                                     return null;
                                   },
                                 ),
                                 const SizedBox(height: 12),
+
+                                // NIM
                                 AuthField(
                                   controller: _nimC,
                                   label: 'NIM',
@@ -149,18 +154,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   keyboardType: TextInputType.number,
                                   textInputAction: TextInputAction.next,
                                   validator: (v) {
-                                    if (v == null || v.trim().isEmpty) {
+                                    final nim = v?.trim() ?? '';
+                                    if (nim.isEmpty) {
                                       return 'NIM wajib diisi';
                                     }
-                                    // NIM FTI diawali 535 / 825, total 9 digit
-                                    if (!RegExp(r'^(535|825)\d{6}$')
-                                        .hasMatch(v.trim())) {
-                                      return 'NIM tidak valid (535xxxxxx / 825xxxxxx)';
+                                    // NIM FTI wajib diawali 535 / 825
+                                    if (!(nim.startsWith('535') ||
+                                        nim.startsWith('825'))) {
+                                      return 'NIM wajib diawali 535/825';
+                                    }
+                                    if (!RegExp(r'^\d{9}$').hasMatch(nim)) {
+                                      return 'NIM harus 9 digit angka';
                                     }
                                     return null;
                                   },
                                 ),
                                 const SizedBox(height: 12),
+
+                                // Email
                                 AuthField(
                                   controller: _emailC,
                                   label: 'Email',
@@ -168,18 +179,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   keyboardType: TextInputType.emailAddress,
                                   textInputAction: TextInputAction.next,
                                   validator: (v) {
-                                    if (v == null || v.trim().isEmpty) {
-                                      return 'Email wajib diisi';
-                                    }
                                     final ok = RegExp(
                                             r'^[\w\.\-]+@[\w\-]+\.[\w\.\-]+$')
-                                        .hasMatch(v.trim());
+                                        .hasMatch(v?.trim() ?? '');
                                     return ok
                                         ? null
-                                        : 'Format email tidak valid';
+                                        : 'Masukkan alamat email dengan format yang benar';
                                   },
                                 ),
                                 const SizedBox(height: 12),
+
+                                // Password
                                 AuthField(
                                   controller: _passC,
                                   label: 'Password',
@@ -190,13 +200,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       _obscure,
                                       () =>
                                           setState(() => _obscure = !_obscure)),
-                                  // password minimal 8 karakter
-                                  validator: (v) {
-                                    if (v == null || v.isEmpty) {
-                                      return 'Password wajib diisi';
+                                  // Cek ulang konfirmasi setiap password berubah
+                                  onChanged: (_) {
+                                    if (_confirmC.text.isNotEmpty) {
+                                      _confirmKey.currentState?.validate();
                                     }
-                                    if (v.length < 8) {
-                                      return 'Password minimal 8 karakter';
+                                  },
+                                  validator: (v) {
+                                    if (v == null || v.length < _kMinPassword) {
+                                      return 'Password minimal $_kMinPassword karakter';
                                     }
                                     if (!RegExp(r'[A-Za-z]').hasMatch(v)) {
                                       return 'Password harus mengandung huruf';
@@ -208,7 +220,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   },
                                 ),
                                 const SizedBox(height: 12),
+
+                                // Konfirmasi Password
                                 AuthField(
+                                  fieldKey: _confirmKey,
                                   controller: _confirmC,
                                   label: 'Konfirmasi Password',
                                   icon: Icons.lock_reset,
@@ -222,7 +237,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       return 'Konfirmasi password wajib diisi';
                                     }
                                     if (v != _passC.text) {
-                                      return 'Password tidak sama';
+                                      return 'Konfirmasi password tidak cocok';
                                     }
                                     return null;
                                   },

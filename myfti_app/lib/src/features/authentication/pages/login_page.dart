@@ -129,13 +129,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
                               validator: (v) {
-                                if (v == null || v.trim().isEmpty) {
-                                  return 'Email wajib diisi';
-                                }
                                 final ok = RegExp(
                                         r'^[\w\.\-]+@[\w\-]+\.[\w\.\-]+$')
-                                    .hasMatch(v.trim());
-                                return ok ? null : 'Format email tidak valid';
+                                    .hasMatch(v?.trim() ?? '');
+                                return ok
+                                    ? null
+                                    : 'Masukkan alamat email dengan format yang benar';
                               },
                             ),
                             const SizedBox(height: 16),
@@ -155,11 +154,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     setState(() => _obscure = !_obscure),
                               ),
                               validator: (v) {
-                                if (v == null || v.isEmpty) {
-                                  return 'Password wajib diisi';
-                                }
-                                if (v.length < 6) {
-                                  return 'Password minimal 6 karakter';
+                                if (v == null || v.length < 8) {
+                                  return 'Password minimal 8 karakter';
                                 }
                                 return null;
                               },
