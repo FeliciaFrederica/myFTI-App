@@ -384,7 +384,21 @@ class _TopUpPageState extends State<TopUpPage> {
                 ],
                 onChanged: _onCustomAmountChanged,
                 decoration: InputDecoration(
-                  prefixText: 'Rp ',
+                  prefixIcon: const Padding(
+                    padding: EdgeInsets.only(left: 14, right: 8),
+                    child: Text(
+                      'Rp ',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  prefixIconConstraints: const BoxConstraints(
+                    minHeight: 0,
+                    minWidth: 0,
+                  ),
                   hintText: 'Masukkan nominal',
                   errorText: _amountError,
                   filled: true,
