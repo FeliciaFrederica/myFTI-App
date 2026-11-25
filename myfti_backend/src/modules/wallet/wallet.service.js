@@ -1,6 +1,7 @@
 const prisma = require("../../config/prisma");
 const crypto = require("crypto");
 const { notify, formatRupiah } = require("../../utils/notify");
+const verifyTransactionPin = require("../../utils/verify-transaction-pin");
 
 const getWallet = async (userId) => {
   return prisma.wallet.findUnique({
@@ -9,8 +10,10 @@ const getWallet = async (userId) => {
   });
 };
 
-const topUp = async (userId, amount) => {
+const topUp = async (userId, amount, pin) => {
   return await prisma.$transaction(async (tx) => {
+    await verifyTransactionPin(tx, userId, pin);
+    
     const wallet = await tx.wallet.findUnique({
       where: { userId },
     });
