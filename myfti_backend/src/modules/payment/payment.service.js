@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { Prisma } = require("../../generated/prisma/client");
 const prisma = require("../../config/prisma");
+const verifyTransactionPin = require("../../utils/verify-transaction-pin");
 
 const MAX_RETRIES = 3;
 const MAX_WALLET_BALANCE = 2147483647;
@@ -37,7 +38,7 @@ const getPaymentRecipients = async () => {
 };
 
 const createPayment = async (studentId, data) => {
-  const { merchantId } = data;
+  const { merchantId, pin } = data;
   const amount = Number(data.amount);
   const description =
     typeof data.description === "string"
@@ -51,21 +52,6 @@ const createPayment = async (studentId, data) => {
       );
     }
 
-  // Validasi kategori pembayaran
-  const allowedCategories = [
-    "ALLEYWAY",
-    "PRINT",
-    "KANTIN",
-    "JUKEL_PO",
-    "AKADEMIK",
-  ];
-
-  if (!allowedCategories.includes(category)) {
-    throw Object.assign(new Error("Invalid payment category"), {
-      statusCode: 400,
-    });
-  }
-
   // Validasi nominal
   if (!Number.isSafeInteger(amount) || amount <= 0) {
     throw Object.assign(new Error("Invalid payment amount"), {
@@ -77,6 +63,7 @@ const createPayment = async (studentId, data) => {
     try {
       return await prisma.$transaction(
         async (tx) => {
+          await verifyTransactionPin(tx, studentId, pin);
           const student = await tx.user.findUnique({
             where: { id: studentId },
             include: { wallet: true },
@@ -95,6 +82,20 @@ const createPayment = async (studentId, data) => {
               statusCode: 404,
             });
           }
+
+          const allowedCategories = [
+            "ALLEYWAY",
+            "PRINT",
+            "KANTIN",
+            "JUKEL_PO",
+            "AKADEMIK",
+          ];
+
+          if (!allowedCategories.includes(merchant.merchantCategory)) {
+            throw Object.assign(new Error("Invalid payment category"), {
+              statusCode: 400,
+            });
+          }
           
           if (!student || student.role !== "STUDENT") {
             throw Object.assign(new Error("Student account not found"), {
@@ -102,7 +103,7 @@ const createPayment = async (studentId, data) => {
             });
           }
 
-          if (!merchant || merchant.role !== "MERCHANT") {
+          if (merchant.role !== "MERCHANT") {
             throw Object.assign(new Error("Merchant not found"), {
               statusCode: 404,
             });
