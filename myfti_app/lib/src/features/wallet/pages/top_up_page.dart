@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
 import 'package:myfti_app/src/core/widgets/top_notice.dart';
 
+import '../../wallet/services/wallet_service.dart';
 import '../../transaction/services/transaction_pin_flow.dart';
 
 class TopUpPage extends StatefulWidget {
@@ -20,19 +20,14 @@ class _TopUpPageState extends State<TopUpPage> {
   final TextEditingController _amountController = TextEditingController();
   final WalletService _walletService = WalletService();
 
-  late Future<Map<String, dynamic>> _walletFuture;
+  Map<String, dynamic>? _wallet;
 
+  bool _isWalletLoading = true;
+  bool _isRefreshingWallet = false;
   bool _isLoading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadWallet();
-  }
-
-  void _loadWallet() {
-    _walletFuture = _walletService.getWallet();
-  }
+  String? _loadErrorTitle;
+  String? _loadErrorMessage;
 
   final List<int> _amountOptions = [50000, 100000, 200000, 500000];
 
@@ -43,6 +38,139 @@ class _TopUpPageState extends State<TopUpPage> {
     return int.tryParse(_amountController.text) ?? 0;
   }
 
+  int get _balance => (_wallet?['balance'] as num?)?.toInt() ?? 0;
+
+  // Memeriksa apakah tombol lanjutkan dapat digunakan
+  bool get _canContinueTopUp {
+    return _wallet != null &&
+        _loadErrorTitle == null &&
+        !_isWalletLoading &&
+        !_isRefreshingWallet &&
+        !_isLoading;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWallet(showPageLoading: true);
+  }
+
+  // Memeriksa apakah error berasal dari koneksi
+  bool _isConnectionError(String message) {
+    const keywords = [
+      'failed host lookup',
+      'network is unreachable',
+      'no address associated',
+      'no internet',
+      'network request failed',
+      'failed to fetch',
+      'xmlhttprequest error',
+      'socketexception',
+      'clientexception',
+      'connection error',
+    ];
+
+    return keywords.any(message.contains);
+  }
+
+  // Memeriksa apakah server tidak merespons
+  bool _isServerError(String message) {
+    const keywords = [
+      'connection refused',
+      'connection reset',
+      'connection closed',
+      'handshakeexception',
+      'timed out',
+      'timeout',
+      'internal server error',
+      'bad gateway',
+      'service unavailable',
+      'gateway timeout',
+      'status code 500',
+      'status code 502',
+      'status code 503',
+      'status code 504',
+    ];
+
+    return keywords.any(message.contains);
+  }
+
+  // Menentukan pesan berdasarkan penyebab kegagalan API
+  void _setWalletLoadError(Object error) {
+    final errorMessage = error.toString().toLowerCase();
+
+    if (_isServerError(errorMessage)) {
+      _loadErrorTitle = 'Layanan sedang bermasalah';
+      _loadErrorMessage =
+          'Server tidak merespons saat mengambil saldo. '
+          'Silakan coba lagi beberapa saat.';
+    } else if (_isConnectionError(errorMessage)) {
+      _loadErrorTitle = 'Koneksi internet bermasalah';
+      _loadErrorMessage =
+          'Periksa koneksi internet Anda, lalu coba muat ulang.';
+    } else {
+      _loadErrorTitle = 'Saldo belum tersedia';
+      _loadErrorMessage =
+          'Terjadi kendala saat mengambil data saldo. '
+          'Silakan coba lagi.';
+    }
+  }
+
+  // Menentukan pesan error saat proses isi saldo
+  String _getTopUpErrorMessage(Object error) {
+    final errorMessage = error.toString().toLowerCase();
+
+    if (_isServerError(errorMessage)) {
+      return 'Layanan sedang bermasalah. '
+          'Server tidak merespons saat memproses isi saldo. '
+          'Silakan coba lagi beberapa saat.';
+    } else if (_isConnectionError(errorMessage)) {
+      return 'Koneksi internet bermasalah. '
+          'Periksa koneksi internet Anda, lalu coba lagi.';
+    }
+
+    return error.toString().replaceFirst('Exception: ', '');
+  }
+
+  // Memuat saldo wallet
+  Future<void> _loadWallet({bool showPageLoading = false}) async {
+    if (showPageLoading) {
+      setState(() {
+        _isWalletLoading = true;
+        _loadErrorTitle = null;
+        _loadErrorMessage = null;
+        _isRefreshingWallet = false;
+      });
+    } else {
+      setState(() {
+        _isRefreshingWallet = true;
+      });
+    }
+
+    try {
+      final wallet = await _walletService.getWallet();
+
+      if (!mounted) return;
+
+      setState(() {
+        _wallet = wallet;
+        _loadErrorTitle = null;
+        _loadErrorMessage = null;
+        _isWalletLoading = false;
+        _isRefreshingWallet = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _setWalletLoadError(error);
+        _isWalletLoading = false;
+        _isRefreshingWallet = false;
+      });
+    }
+  }
+
+  // Mengubah nominal menjadi format Rupiah
   String _formatRupiah(int amount) {
     final formatted = amount.toString().replaceAllMapped(
       RegExp(r'\B(?=(\d{3})+(?!\d))'),
@@ -76,7 +204,10 @@ class _TopUpPageState extends State<TopUpPage> {
     });
   }
 
+  // Menampilkan konfirmasi isi saldo
   void _showConfirmation() {
+    if (!_canContinueTopUp) return;
+
     final amount = _selectedAmount ?? _amount;
 
     if (amount <= 0) {
@@ -88,7 +219,7 @@ class _TopUpPageState extends State<TopUpPage> {
 
     if (amount < 10000) {
       setState(() {
-        _amountError = 'Minimal Saldo adalah Rp 10.000.';
+        _amountError = 'Minimal isi saldo adalah Rp 10.000.';
       });
       return;
     }
@@ -121,7 +252,9 @@ class _TopUpPageState extends State<TopUpPage> {
                 height: 1.5,
               ),
               children: [
-                const TextSpan(text: 'Kamu akan menambahkan saldo sebesar '),
+                const TextSpan(
+                  text: 'Anda akan menambahkan saldo sebesar ',
+                ),
                 TextSpan(
                   text: _formatRupiah(amount),
                   style: const TextStyle(
@@ -153,7 +286,10 @@ class _TopUpPageState extends State<TopUpPage> {
                 },
                 child: const Text(
                   'Konfirmasi',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -177,6 +313,7 @@ class _TopUpPageState extends State<TopUpPage> {
     );
   }
 
+  // Memproses top up menggunakan PIN transaksi
   Future<void> _submitTopUp(int amount) async {
     final pin = await TransactionPinFlow.requestPin(context);
 
@@ -201,15 +338,11 @@ class _TopUpPageState extends State<TopUpPage> {
     } catch (error) {
       if (!mounted) return;
 
-      final errorMessage = error.toString().toLowerCase();
-      final message =
-          errorMessage.contains('clientexception') ||
-              errorMessage.contains('socketexception') ||
-              errorMessage.contains('connection refused')
-          ? 'Gagal terhubung ke server. Periksa koneksi dan coba lagi.'
-          : error.toString().replaceFirst('Exception: ', '');
-
-      TopNotice.show(context, message, success: false);
+      TopNotice.show(
+        context,
+        _getTopUpErrorMessage(error),
+        success: false,
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -225,287 +358,351 @@ class _TopUpPageState extends State<TopUpPage> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
+  // Menampilkan kartu saldo wallet
+  Widget _buildBalanceCard() {
+    final hasError = _loadErrorTitle != null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: primaryPurple,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Saldo Tersedia',
+            style: TextStyle(color: Colors.white70),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: hasError
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _loadErrorTitle!,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _isRefreshingWallet
+                                ? 'Sedang mencoba memuat ulang...'
+                                : _loadErrorMessage!,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        _wallet != null
+                            ? _formatRupiah(_balance)
+                            : 'Memuat saldo...',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 25,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+              if (hasError)
+                IconButton(
+                  onPressed: _isRefreshingWallet
+                      ? null
+                      : () => _loadWallet(),
+                  icon: _isRefreshingWallet
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.refresh_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                  tooltip: 'Muat ulang saldo',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Form utama top up
+  Widget _buildTopUpForm() {
     final displayedAmount = _selectedAmount ?? _amount;
 
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Saldo tersedia
+          _buildBalanceCard(),
+
+          const SizedBox(height: 28),
+
+          // Pilihan nominal
+          const Text(
+            'Pilih Nominal',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _amountOptions.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 2.2,
+            ),
+            itemBuilder: (context, index) {
+              final amount = _amountOptions[index];
+              final isSelected = _selectedAmount == amount;
+
+              return OutlinedButton(
+                onPressed: _isLoading
+                    ? null
+                    : () => _selectAmount(amount),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: isSelected
+                      ? const Color(0xFFF3EEFC)
+                      : Colors.white,
+                  foregroundColor: primaryPurple,
+                  side: BorderSide(
+                    color: isSelected
+                        ? primaryPurple
+                        : const Color(0xFFD1C4E9),
+                    width: isSelected ? 1.5 : 1,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  _formatRupiah(amount),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 16),
+
+          // Nominal manual
+          const Text(
+            'Atau Masukkan Nominal Lain',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          TextField(
+            controller: _amountController,
+            enabled: !_isLoading,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            onChanged: _onCustomAmountChanged,
+            decoration: InputDecoration(
+              prefixIcon: const Padding(
+                padding: EdgeInsets.only(left: 14, right: 8),
+                child: Text(
+                  'Rp ',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minHeight: 0,
+                minWidth: 0,
+              ),
+              hintText: 'Masukkan nominal',
+              errorText: _amountError,
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: Color(0xFFD1C4E9),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: Color(0xFFD1C4E9),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: primaryPurple,
+                  width: 1.5,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: Colors.red,
+                ),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: Colors.red,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Ringkasan
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDE7F6),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ringkasan Isi Saldo',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Nominal Isi Saldo'),
+                    Text(
+                      _formatRupiah(displayedAmount),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: primaryPurple,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Biaya Admin'),
+                    Text('Rp 0'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Tombol konfirmasi
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _canContinueTopUp ? _showConfirmation : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryPurple,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey.shade300,
+                disabledForegroundColor: Colors.grey.shade600,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Lanjutkan',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text(
           'Isi Saldo',
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: backgroundColor,
         elevation: 0,
         iconTheme: const IconThemeData(color: textColor),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Current balance
-              FutureBuilder<Map<String, dynamic>>(
-                future: _walletFuture,
-                builder: (context, snapshot) {
-                  String balanceText = 'Memuat saldo...';
-
-                  if (snapshot.hasData) {
-                    final balance = (snapshot.data!['balance'] as num).toInt();
-                    balanceText = _formatRupiah(balance);
-                  } else if (snapshot.hasError) {
-                    balanceText = 'Gagal memuat saldo';
-                  }
-
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: primaryPurple,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Saldo Tersedia',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                balanceText,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: snapshot.hasError ? 22 : 25,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            if (snapshot.hasError)
-                              IconButton(
-                                onPressed: () {
-                                  setState(_loadWallet);
-                                },
-                                icon: const Icon(
-                                  Icons.refresh_rounded,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                                tooltip: 'Muat ulang saldo',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 28),
-
-              // Amount options
-              const Text(
-                'Pilih Nominal',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
+        child: _isWalletLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: primaryPurple,
                 ),
-              ),
-              const SizedBox(height: 14),
-
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _amountOptions.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 2.2,
-                ),
-                itemBuilder: (context, index) {
-                  final amount = _amountOptions[index];
-                  final isSelected = _selectedAmount == amount;
-
-                  return OutlinedButton(
-                    onPressed: () => _selectAmount(amount),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: isSelected
-                          ? const Color(0xFFF3EEFC)
-                          : Colors.white,
-                      foregroundColor: primaryPurple,
-                      side: BorderSide(
-                        color: isSelected
-                            ? primaryPurple
-                            : const Color(0xFFD1C4E9),
-                        width: isSelected ? 1.5 : 1,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: Text(
-                      _formatRupiah(amount),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              // Custom amount
-              const Text(
-                'Atau Masukkan Nominal Lain',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              TextField(
-                controller: _amountController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                onChanged: _onCustomAmountChanged,
-                decoration: InputDecoration(
-                  prefixIcon: const Padding(
-                    padding: EdgeInsets.only(left: 14, right: 8),
-                    child: Text(
-                      'Rp ',
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  prefixIconConstraints: const BoxConstraints(
-                    minHeight: 0,
-                    minWidth: 0,
-                  ),
-                  hintText: 'Masukkan nominal',
-                  errorText: _amountError,
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFD1C4E9)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFD1C4E9)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: primaryPurple,
-                      width: 1.5,
-                    ),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Colors.red),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Colors.red, width: 1.5),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Summary
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEDE7F6),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Ringkasan Isi Saldo',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Nominal Isi Saldo'),
-                        Text(
-                          _formatRupiah(displayedAmount),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: primaryPurple,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [Text('Biaya Admin'), Text('Rp 0')],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Confirmation button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _showConfirmation,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryPurple,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          'Lanjutkan',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
+              )
+            : _buildTopUpForm(),
       ),
     );
   }
