@@ -39,6 +39,7 @@ class TransferService {
   Future<Map<String, dynamic>> transfer({
     required String recipientWalletId,
     required int amount,
+    required String pin,
     String? description,
   }) async {
     if (amount < minTransfer) {
@@ -54,6 +55,7 @@ class TransferService {
     final body = <String, dynamic>{
       'recipientWalletId': recipientWalletId.trim(),
       'amount': amount,
+      'pin': pin,
     };
 
     if (description != null && description.trim().isNotEmpty) {

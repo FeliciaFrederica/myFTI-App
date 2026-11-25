@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:myfti_app/src/core/widgets/top_notice.dart';
 
 import '../../wallet/services/wallet_service.dart';
+import '../../transaction/services/transaction_pin_flow.dart';
 import '../services/transfer_service.dart';
 
 class TransferPage extends StatefulWidget {
@@ -264,17 +265,24 @@ class _TransferPageState extends State<TransferPage> {
     }
   }
 
-  // Memproses transfer dan kembali ke halaman sebelumnya jika berhasil
+  // Memproses transfer dengan verifikasi PIN transaksi
   Future<void> _submitTransfer() async {
     setState(() {
       _isTransferring = true;
     });
 
     try {
+      // Meminta PIN transaksi melalui alur PIN yang digunakan Payment
+      final pin = await TransactionPinFlow.requestPin(context);
+
+      if (!mounted || pin == null) return;
+
+      // Mengirim data transfer beserta PIN ke backend
       await _transferService.transfer(
         recipientWalletId: _walletIdController.text.trim(),
         amount: _amount,
         description: _descriptionController.text.trim(),
+        pin: pin,
       );
 
       if (!mounted) return;
