@@ -1,6 +1,7 @@
 const prisma = require("../../config/prisma");
 const crypto = require("crypto");
 const { notify, formatRupiah } = require("../../utils/notify");
+const verifyTransactionPin = require("../../utils/verify-transaction-pin");
 
 const MIN_TRANSFER = 10000;
 const MAX_WALLET_BALANCE = 2147483647; // batas maks saldo wallet ikuti kapasitas database
@@ -83,7 +84,7 @@ const getTransferRecipient = async (walletId, currentUserId) => {
 };
 
 // Memproses transfer antar mahasiswa
-const transfer = async (userId, recipientWalletId, amount, description) => {
+const transfer = async (userId, recipientWalletId, amount, description, pin) => {
   if (!userId) {
     throw createError("Mohon login terlebih dahulu.", 401);
   }
@@ -111,6 +112,9 @@ const transfer = async (userId, recipientWalletId, amount, description) => {
   const normalizedDescription = description?.trim();
 
   return await runTransferTransaction(async (tx) => {
+    // Memverifikasi PIN sebelum memproses transfer
+    await verifyTransactionPin(tx, userId, pin);
+
     // Mengambil data wallet pengirim
     const senderWallet = await tx.wallet.findUnique({
       where: {
