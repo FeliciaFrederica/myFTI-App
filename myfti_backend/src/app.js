@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 
-const authRoutes = require("./routes/auth.routes");
+const authRoutes = require("./modules/authentication/auth.routes");
 const transactionRoutes = require("./modules/transaction/transaction.routes");
 const paymentRoutes = require("./modules/payment/payment.routes");
 const errorHandler = require("./middlewares/error.middleware");
@@ -10,6 +10,8 @@ const walletRoutes = require("./modules/wallet/wallet.routes");
 const transferRoutes = require("./modules/transfer/transfer.routes");
 const withdrawRoutes = require("./modules/withdraw/withdraw.routes");
 const recipientRoutes = require("./modules/transfer/recipient.routes");
+const summaryRoutes = require("./modules/summary/summary.routes");
+const notificationRoutes = require("./modules/notification/notification.routes");
 
 const app = express();
 
@@ -72,6 +74,12 @@ app.use("/api/withdrawals", withdrawRoutes);
 
 // Transfer recipient
 app.use("/api/users/recipient", recipientRoutes);
+
+// Financial summary
+app.use("/api/financial-summary", summaryRoutes);
+
+// Notification
+app.use("/api/notifications", notificationRoutes);
 
 // Endpoint tidak ditemukan
 app.use((req, res) => {

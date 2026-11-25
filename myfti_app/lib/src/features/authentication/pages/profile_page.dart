@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/top_notice.dart';
 import '../services/auth_service.dart';
-import '../widgets/auth_field.dart';
+import '../../notification/pages/notification_page.dart';
+import 'edit_profile_page.dart';
+import '../widgets/user_avatar.dart';
+
+const Color _kCardColor = Color(0xFFF3EEFC);
+
+const double _kNavBarSpace = 100;
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -33,109 +40,97 @@ class _ProfilePageState extends State<ProfilePage> {
 
   String _errorText(Object e) => e.toString().replaceFirst('Exception: ', '');
 
-  void _showSnack(String message, {required bool success}) {
+  // Notifikasi tampil di bagian atas halaman
+  void _showNotice(String message, {required bool success}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: success ? AppColors.success : AppColors.error,
-    ));
+    TopNotice.show(context, message, success: success);
   }
 
-  void _openEditSheet(UserModel user) {
-    final formKey = GlobalKey<FormState>();
-    final nameC = TextEditingController(text: user.name);
-    final emailC = TextEditingController(text: user.email);
-    bool saving = false;
+  // Terhubung ke halaman edit profil, data akan dimuat ulang setelah berhasil menyimpan perubahan data
+  Future<void> _openEditPage(UserModel user) async {
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => EditProfilePage(user: user)),
+    );
 
-    showModalBottomSheet(
+    if (saved == true) {
+      _reload();
+      _showNotice('Profil berhasil diperbarui', success: true);
+    }
+  }
+
+  // TODO: sambungkan ke halaman Ubah PIN Transaksi
+  void _openChangePin() {
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(builder: (_) => const ChangePinPage()),
+    // );
+  }
+
+  void _openNotification() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NotificationPage()),
+    );
+  }
+
+  void _showAbout() {
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.background,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => Padding(
-          padding: EdgeInsets.fromLTRB(
-              24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Edit Profil',
-                    style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.text)),
-                const SizedBox(height: 20),
-                AuthField(
-                  controller: nameC,
-                  label: 'Nama Lengkap',
-                  icon: Icons.person_outline,
-                  validator: (v) => (v == null || v.trim().length < 3)
-                      ? 'Nama minimal 3 karakter'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                AuthField(
-                  controller: emailC,
-                  label: 'Email',
-                  icon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Email wajib diisi';
-                    }
-                    final ok = RegExp(r'^[\w\.\-]+@[\w\-]+\.[\w\.\-]+$')
-                        .hasMatch(v.trim());
-                    return ok ? null : 'Format email tidak valid';
-                  },
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: saving
-                        ? null
-                        : () async {
-                            if (!formKey.currentState!.validate()) return;
-                            setSheet(() => saving = true);
-                            try {
-                              await AuthService.updateProfile(
-                                name: nameC.text.trim(),
-                                email: emailC.text.trim(),
-                              );
-                              if (ctx.mounted) Navigator.pop(ctx);
-                              _reload();
-                              _showSnack('Profil berhasil diperbarui',
-                                  success: true);
-                            } catch (e) {
-                              if (ctx.mounted) setSheet(() => saving = false);
-                              _showSnack(_errorText(e), success: false);
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: saving
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2.5, color: Colors.white))
-                        : const Text('Simpan'),
-                  ),
-                ),
-              ],
-            ),
-          ),
+      builder: (ctx) => AlertDialog(
+        title: const Text('myFTI'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('1.0.0'),
+            SizedBox(height: 16),
+            Text('Aplikasi keuangan digital simulasi untuk mahasiswa FTI.'),
+          ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              showLicensePage(
+                context: context,
+                applicationName: 'myFTI',
+                applicationVersion: '1.0.0',
+              );
+            },
+            child: const Text('Lihat lisensi'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _confirmLogout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Yakin ingin keluar dari akun myFTI?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Logout',
+                  style: TextStyle(color: AppColors.error))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    await AuthService.logout();
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   @override
@@ -143,16 +138,21 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Profil'),
         automaticallyImplyLeading: false,
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.pushNamed(context, '/settings'),
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleSpacing: 20,
+        title: const Text(
+          'Profil',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppColors.text,
           ),
-        ],
+        ),
       ),
       body: FutureBuilder<UserModel>(
         future: _future,
@@ -179,60 +179,128 @@ class _ProfilePageState extends State<ProfilePage> {
             );
           }
           final user = snap.data!;
+
           return RefreshIndicator(
             onRefresh: _reload,
-            child: ListView(
+            child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              children: [
-                Center(
-                  child: CircleAvatar(
-                    radius: 48,
-                    backgroundColor: AppColors.primary,
-                    child: Text(user.initials,
-                        style: const TextStyle(
-                            fontSize: 32,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold)),
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      Center(
+                        child: UserAvatar(
+                          initials: user.initials,
+                          avatar: user.avatar,
+                          radius: 48,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: Text(user.name.toUpperCase(),
+                            style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.text)),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Akun
+                      _sectionTitle('Akun'),
+                      Card(
+                        color: _kCardColor,
+                        elevation: 0,
+                        margin: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        child: Column(
+                          children: [
+                            _info(Icons.badge_outlined, 'NIM', user.nim),
+                            const Divider(height: 1),
+                            _info(Icons.email_outlined, 'Email', user.email),
+                            const Divider(height: 1),
+                            _info(
+                                Icons.account_balance_wallet_outlined,
+                                'Wallet ID',
+                                user.walletId.isEmpty ? '-' : user.walletId),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Pengaturan
+                      _sectionTitle('Pengaturan'),
+                      Card(
+                        color: _kCardColor,
+                        elevation: 0,
+                        margin: EdgeInsets.zero,
+                        clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        child: Column(
+                          children: [
+                            _menu(Icons.edit_outlined, 'Edit Profil',
+                                () => _openEditPage(user)),
+                            const Divider(height: 1),
+                            _menu(Icons.pin_outlined, 'Ubah PIN Transaksi',
+                                _openChangePin),
+                            const Divider(height: 1),
+                            _menu(Icons.notifications_outlined, 'Notifikasi',
+                                _openNotification),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Mengenai
+                      _sectionTitle('Mengenai'),
+                      Card(
+                        color: _kCardColor,
+                        elevation: 0,
+                        margin: EdgeInsets.zero,
+                        clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        child: _menu(
+                          Icons.info_outline,
+                          'Tentang Aplikasi',
+                          _showAbout,
+                          subtitle: 'myFTI v1.0.0',
+                        ),
+                      ),
+                    ]),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Center(
-                  child: Text(user.name,
-                      style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.text)),
-                ),
-                const SizedBox(height: 24),
-                Card(
-                  color: AppColors.card,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                  child: Column(
-                    children: [
-                      _info(Icons.badge_outlined, 'NIM', user.nim),
-                      const Divider(height: 1),
-                      _info(Icons.email_outlined, 'Email', user.email),
-                      const Divider(height: 1),
-                      _info(Icons.account_balance_wallet_outlined, 'Wallet ID',
-                          user.walletId.isEmpty ? '-' : user.walletId),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _openEditSheet(user),
-                    icon: const Icon(Icons.edit),
-                    label: const Text('Edit Profil'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
+
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.fromLTRB(20, 24, 20, _kNavBarSpace),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton.icon(
+                                onPressed: _confirmLogout,
+                                icon: const Icon(Icons.logout),
+                                label: const Text('Logout'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -244,6 +312,18 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _sectionTitle(String text) => Padding(
+        padding: const EdgeInsets.only(left: 4, bottom: 8),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.text,
+          ),
+        ),
+      );
+
   Widget _info(IconData icon, String title, String value) => ListTile(
         leading: Icon(icon, color: AppColors.primary),
         title: Text(title,
@@ -253,5 +333,15 @@ class _ProfilePageState extends State<ProfilePage> {
                 fontSize: 15,
                 color: AppColors.text,
                 fontWeight: FontWeight.w500)),
+      );
+
+  Widget _menu(IconData icon, String title, VoidCallback onTap,
+          {String? subtitle}) =>
+      ListTile(
+        leading: Icon(icon, color: AppColors.primary),
+        title: Text(title),
+        subtitle: subtitle == null ? null : Text(subtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
       );
 }

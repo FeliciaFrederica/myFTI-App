@@ -1,5 +1,6 @@
 const prisma = require("../../config/prisma");
 const crypto = require("crypto");
+const { notify, formatRupiah } = require("../../utils/notify");
 
 const MIN_WITHDRAW = 10000;
 
@@ -231,6 +232,13 @@ const withdraw = async (
         accountNumber: targetAccountNumber,
       },
     });
+
+    await notify(
+      tx,
+      userId,
+      "Withdraw berhasil",
+      `Withdraw ${formatRupiah(amount)} ke ${targetBank.bankName} (${targetAccountNumber.slice(-4)}) berhasil.`
+    );
 
     // Mengambil saldo terbaru
     const updatedWallet = await tx.wallet.findUnique({

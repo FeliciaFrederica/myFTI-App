@@ -8,9 +8,9 @@
  *
  * 🟢 You can import this file directly.
  */
-export type * from './models/User.ts'
-export type * from './models/Wallet.ts'
-export type * from './models/Transaction.ts'
-export type * from './models/BankAccount.ts'
-export type * from './models/Notification.ts'
-export type * from './commonInputTypes.ts'
+export type * from './models/User'
+export type * from './models/Wallet'
+export type * from './models/Transaction'
+export type * from './models/BankAccount'
+export type * from './models/Notification'
+export type * from './commonInputTypes'

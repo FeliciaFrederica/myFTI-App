@@ -14,6 +14,7 @@ export const TransactionType = {
   TRANSFER_IN: 'TRANSFER_IN',
   TRANSFER_OUT: 'TRANSFER_OUT',
   PAYMENT: 'PAYMENT',
+  PAYMENT_IN: 'PAYMENT_IN',
   WITHDRAW: 'WITHDRAW'
 } as const
 

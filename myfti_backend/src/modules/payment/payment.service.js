@@ -172,7 +172,7 @@ const createPayment = async (studentId, data) => {
               },
               {
                 reference: `PAY-${crypto.randomUUID()}`,
-                type: "PAYMENT",
+                type: "PAYMENT_IN",
                 amount,
                 description:
                   description || `Payment from ${student.fullName}`,
