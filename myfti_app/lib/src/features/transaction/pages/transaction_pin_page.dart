@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/theme/app_theme.dart';
+
 class TransactionPinPage extends StatefulWidget {
   const TransactionPinPage({super.key});
 
@@ -9,135 +11,239 @@ class TransactionPinPage extends StatefulWidget {
 }
 
 class _TransactionPinPageState extends State<TransactionPinPage> {
-  static const Color primaryPurple = Color(0xFF673AB7);
-  static const Color textColor = Color(0xFF2D1B46);
+  final _pinC = TextEditingController();
+  final _pinFocus = FocusNode();
 
-  final TextEditingController _pinController = TextEditingController();
-  String? _error;
+  String? _errorMessage;
+  bool _isSubmitting = false;
 
-  void _submit() {
-    final pin = _pinController.text;
+  @override
+  void initState() {
+    super.initState();
+    _pinC.addListener(_onPinChanged);
 
-    if (!RegExp(r'^\d{6}$').hasMatch(pin)) {
-      setState(() {
-        _error = 'Masukkan PIN yang terdiri dari 6 angka.';
-      });
-      return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _pinFocus.requestFocus();
+    });
+  }
+
+  void _onPinChanged() {
+    if (mounted) {
+      setState(() => _errorMessage = null);
     }
-
-    Navigator.pop(context, pin);
   }
 
   @override
   void dispose() {
-    _pinController.dispose();
+    _pinC.removeListener(_onPinChanged);
+    _pinC.dispose();
+    _pinFocus.dispose();
     super.dispose();
+  }
+
+  void _submit() {
+    if (_isSubmitting || _pinC.text.length != 6) return;
+
+    _isSubmitting = true;
+    Navigator.pop(context, _pinC.text);
+  }
+
+  Widget _buildPinInput() {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        IgnorePointer(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(6, (index) {
+              final filled = index < _pinC.text.length;
+
+              return Container(
+                width: 36,
+                height: 44,
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                decoration: BoxDecoration(
+                  color: filled ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: filled ? AppColors.primary : Colors.grey.shade400,
+                    width: 1.5,
+                  ),
+                ),
+                child: filled
+                    ? const Center(
+                        child: Icon(
+                          Icons.circle,
+                          size: 9,
+                          color: AppColors.background,
+                        ),
+                      )
+                    : null,
+              );
+            }),
+          ),
+        ),
+        SizedBox(
+          height: 54,
+          child: TextField(
+            controller: _pinC,
+            focusNode: _pinFocus,
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            obscureText: true,
+            maxLength: 6,
+            autocorrect: false,
+            enableSuggestions: false,
+            showCursor: false,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.transparent),
+            cursorColor: Colors.transparent,
+            decoration: const InputDecoration(
+              counterText: '',
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            onChanged: (value) {
+              if (value.length == 6) {
+                _submit();
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // widget awan megamendung
+  Widget _buildCloudItem({
+    double? top,
+    double? bottom,
+    double? right,
+    double? left,
+    required double width,
+    double angle = 0,
+    bool flipX = false,
+  }) {
+    return Positioned(
+      top: top,
+      bottom: bottom,
+      right: right,
+      left: left,
+      child: Transform.rotate(
+        angle: angle,
+        child: Transform.flip(
+          flipX: flipX,
+          child: Image.asset(
+            'assets/images/mega_mendung.png',
+            width: width,
+            fit: BoxFit.contain,
+            color: AppColors.primary,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F6FC),
+      backgroundColor: AppColors.background,
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text(
-          'Verifikasi PIN',
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xFFF8F6FC),
-        iconTheme: const IconThemeData(color: textColor),
+        backgroundColor: AppColors.background,
         elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.text),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 36),
-              const Icon(
-                Icons.lock_outline_rounded,
-                size: 64,
-                color: primaryPurple,
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Masukkan PIN Transaksi',
-                style: TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Masukkan 6 digit PIN untuk melanjutkan transaksi Anda.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, height: 1.5),
-              ),
-              const SizedBox(height: 32),
-              TextField(
-                controller: _pinController,
-                autofocus: true,
-                obscureText: true,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 26,
-                  letterSpacing: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(6),
-                ],
-                decoration: InputDecoration(
-                  counterText: '',
-                  hintText: '••••••',
-                  errorText: _error,
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFD1C4E9)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFD1C4E9)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: primaryPurple,
-                      width: 1.5,
+        child: Stack(
+          children: [
+            // Motif dekoratif Mega Mendung
+            Positioned.fill(
+              child: Center(
+                child: Opacity(
+                  opacity: 0.13,
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    height: 240,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        _buildCloudItem(
+                          right: -25,
+                          top: -75,
+                          width: 170,
+                          angle: -0.15,
+                        ),
+                        _buildCloudItem(
+                          left: -15,
+                          bottom: -20,
+                          width: 150,
+                          angle: 0.2,
+                          flipX: true,
+                        ),
+                        _buildCloudItem(
+                          right: 80,
+                          top: -10,
+                          width: 105,
+                          angle: 0.25,
+                          flipX: true,
+                        ),
+                        _buildCloudItem(
+                          left: 75,
+                          bottom: 40,
+                          width: 120,
+                          angle: -0.2,
+                        ),
+                        _buildCloudItem(
+                          right: 150,
+                          top: 40,
+                          width: 85,
+                          angle: -0.35,
+                          flipX: true,
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                onChanged: (_) {
-                  if (_error != null) {
-                    setState(() => _error = null);
-                  }
-                },
-                onSubmitted: (_) => _submit(),
               ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryPurple,
-                    foregroundColor: Colors.white,
+            ),
+
+            // Judul dan PIN tetap di atas meskipun keyboard muncul.
+            Positioned(
+              top: 28,
+              left: 0,
+              right: 0,
+              child: Column(
+                children: [
+                  const Text(
+                    'Masukkan PIN Anda',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 23,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.text,
+                    ),
                   ),
-                  child: const Text(
-                    'Verifikasi',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
+                  const SizedBox(height: 32),
+                  _buildPinInput(),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

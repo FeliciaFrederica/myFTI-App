@@ -148,6 +148,32 @@ class AuthService {
     }
   }
 
+  // Mengubah PIN transaksi dengan verifikasi PIN lama.
+  static Future<void> changePin({
+    required String currentPin,
+    required String newPin,
+  }) async {
+    final res = await _guard(
+      _send(
+        'PUT',
+        '/auth/pin/change',
+        body: {'currentPin': currentPin, 'newPin': newPin},
+        auth: true,
+      ),
+    );
+
+    final body = _decode(res);
+
+    if (res.statusCode == 401) {
+      await SessionService.clear();
+      throw Exception('Sesi berakhir, silakan login lagi');
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception(_message(body, 'Gagal mengubah PIN'));
+    }
+  }
+
   // Login, lalu simpan token JWT + data user ke SessionService.
   static Future<void> login(String email, String password) async {
     final res = await _guard(
