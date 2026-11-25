@@ -67,16 +67,14 @@ class _TopUpPageState extends State<TopUpPage> {
     setState(() {
       _selectedAmount = null;
 
-      if (_amountError != null) {
-        final amount = int.tryParse(value) ?? 0;
+      final amount = int.tryParse(value) ?? 0;
 
-        if (value.isEmpty) {
-          _amountError = 'Nominal wajib diisi.';
-        } else if (amount < 10000) {
-          _amountError = 'Minimal Saldo adalah Rp 10.000.';
-        } else {
-          _amountError = null;
-        }
+      if (value.isEmpty) {
+        _amountError = null;
+      } else if (amount < 10000) {
+        _amountError = 'Minimal isi saldo adalah Rp 10.000.';
+      } else {
+        _amountError = null;
       }
     });
   }
@@ -195,25 +193,28 @@ class _TopUpPageState extends State<TopUpPage> {
     try {
       await _walletService.topUp(amount);
       if (!mounted) return;
-      final messenger = ScaffoldMessenger.of(context);
-
-      Navigator.pop(context, true);
 
       TopNotice.show(
         context, 
         'Isi Saldo ${_formatRupiah(amount)} berhasil!',
         success: true,
       );
+
+      Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error.toString().replaceFirst('Exception: ', ''),
-          ),
-          backgroundColor: Colors.red,
-        ),
+      final errorMessage = error.toString().toLowerCase();
+      final message = errorMessage.contains('clientexception') ||
+              errorMessage.contains('socketexception') ||
+              errorMessage.contains('connection refused')
+            ? 'Gagal terhubung ke server. Periksa koneksi dan coba lagi.'
+            : 'Top Up gagal. Silakan coba lagi.';
+
+      TopNotice.show(
+        context,
+        message,
+        success: false,
       );
     } finally {
       if (mounted) {
