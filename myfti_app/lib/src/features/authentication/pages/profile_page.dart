@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/user_model.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/top_notice.dart';
 import '../services/auth_service.dart';
-import '../../notification/pages/notification_page.dart';
 import 'edit_profile_page.dart';
 import '../widgets/user_avatar.dart';
 
 const Color _kCardColor = Color(0xFFF3EEFC);
 
-const double _kNavBarSpace = 100;
+const double _kNavBarSpace = 70;
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -46,6 +46,20 @@ class _ProfilePageState extends State<ProfilePage> {
     TopNotice.show(context, message, success: success);
   }
 
+  // Menyalin Wallet ID ke clipboard
+  Future<void> _copyWalletId(String walletId) async {
+    await Clipboard.setData(ClipboardData(text: walletId));
+
+    if (!mounted) return;
+
+    TopNotice.show(
+      context,
+      'ID Dompet berhasil disalin!',
+      success: true,
+      duration: const Duration(seconds: 2),
+    );
+  }
+
   // Terhubung ke halaman edit profil, data akan dimuat ulang setelah berhasil menyimpan perubahan data
   Future<void> _openEditPage(UserModel user) async {
     final saved = await Navigator.push<bool>(
@@ -65,13 +79,6 @@ class _ProfilePageState extends State<ProfilePage> {
     //   context,
     //   MaterialPageRoute(builder: (_) => const ChangePinPage()),
     // );
-  }
-
-  void _openNotification() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const NotificationPage()),
-    );
   }
 
   void _showAbout() {
@@ -109,20 +116,69 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // Pop up konfirmasi logout (gaya sama seperti pop up di halaman Isi Saldo)
   Future<void> _confirmLogout() async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Yakin ingin keluar dari akun myFTI?'),
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFFF3EEFC),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text(
+          'Logout',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.text,
+          ),
+        ),
+        content: const Text(
+          'Yakin ingin keluar dari akun myFTI?',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.black87,
+            height: 1.5,
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Batal')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Logout',
-                  style: TextStyle(color: AppColors.error))),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text(
+                'Logout',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text(
+                'Batal',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -135,6 +191,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final double systemBottomInset = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -221,9 +279,13 @@ class _ProfilePageState extends State<ProfilePage> {
                             _info(Icons.email_outlined, 'Email', user.email),
                             const Divider(height: 1),
                             _info(
-                                Icons.account_balance_wallet_outlined,
-                                'Wallet ID',
-                                user.walletId.isEmpty ? '-' : user.walletId),
+                              Icons.account_balance_wallet_outlined,
+                              'ID Dompet',
+                              user.walletId.isEmpty ? '-' : user.walletId,
+                              onCopy: user.walletId.isEmpty
+                                  ? null
+                                  : () => _copyWalletId(user.walletId),
+                            ),
                           ],
                         ),
                       ),
@@ -245,9 +307,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             const Divider(height: 1),
                             _menu(Icons.pin_outlined, 'Ubah PIN Transaksi',
                                 _openChangePin),
-                            const Divider(height: 1),
-                            _menu(Icons.notifications_outlined, 'Notifikasi',
-                                _openNotification),
                           ],
                         ),
                       ),
@@ -276,8 +335,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: Padding(
-                    padding:
-                        const EdgeInsets.fromLTRB(20, 24, 20, _kNavBarSpace),
+                    padding: EdgeInsets.fromLTRB(
+                        20, 24, 20, _kNavBarSpace + systemBottomInset),
                     child: Column(
                       children: [
                         Expanded(
@@ -324,15 +383,41 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       );
 
-  Widget _info(IconData icon, String title, String value) => ListTile(
+  Widget _info(IconData icon, String title, String value,
+          {VoidCallback? onCopy}) =>
+      ListTile(
         leading: Icon(icon, color: AppColors.primary),
         title: Text(title,
             style: const TextStyle(fontSize: 12, color: AppColors.secondary)),
-        subtitle: Text(value,
-            style: const TextStyle(
-                fontSize: 15,
-                color: AppColors.text,
-                fontWeight: FontWeight.w500)),
+        subtitle: onCopy == null
+            ? Text(value,
+                style: const TextStyle(
+                    fontSize: 15,
+                    color: AppColors.text,
+                    fontWeight: FontWeight.w500))
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(value,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          color: AppColors.text,
+                          fontWeight: FontWeight.w500)),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onCopy,
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.copy_rounded,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
       );
 
   Widget _menu(IconData icon, String title, VoidCallback onTap,
