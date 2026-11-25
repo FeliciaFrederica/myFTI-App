@@ -296,6 +296,16 @@ class _TransferPageState extends State<TransferPage> {
       return;
     }
 
+    // Memeriksa kecukupan saldo sebelum konfirmasi dan verifikasi PIN
+    if (_amount > _balance) {
+      TopNotice.show(
+        context,
+        'Saldo kamu tidak mencukupi.',
+        success: false,
+      );
+      return;
+    }
+
     setState(() {
       _walletIdError = null;
       _amountError = null;
@@ -629,7 +639,6 @@ class _TransferPageState extends State<TransferPage> {
           ],
         ),
         const SizedBox(height: 12),
-
         TextField(
           controller: _descriptionController,
           enabled: !_isTransferring,
@@ -671,7 +680,6 @@ class _TransferPageState extends State<TransferPage> {
             ),
           ),
         ),
-
         _buildWarning(_descriptionError),
       ],
     );
