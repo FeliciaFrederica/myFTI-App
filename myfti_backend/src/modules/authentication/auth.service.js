@@ -11,6 +11,17 @@ const signToken = (user) =>
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 
+const signPinSetupToken = (user) =>
+  jwt.sign(
+    {
+      sub: user.id,
+      tv: user.tokenVersion,
+      purpose: 'PIN_SETUP',
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '10m' }
+  );
+
 const sanitizeUser = (user) => ({
   id: user.id,
   fullName: user.fullName,
@@ -69,7 +80,10 @@ async function register({ fullName, nim, email, password }) {
         return { ...created, wallet };
       });
 
-      return { token: signToken(user), user: sanitizeUser(user) };
+      return {
+        setupToken: signPinSetupToken(user),
+        user: sanitizeUser(user),
+      };
     } catch (err) {
       if (err.code === 'P2002') {
         const dup = await prisma.user.findFirst({
@@ -178,9 +192,28 @@ async function changePassword(userId, currentPassword, newPassword) {
   });
 }
 
+async function createPin(userId, pin) {
+  const pinHash = await bcrypt.hash(pin, 12);
+
+  const result = await prisma.user.updateMany({
+    where: {
+      id: userId,
+      pinHash: null,
+    },
+    data: {
+      pinHash,
+    },
+  });
+
+  if (result.count === 0) {
+    throw new AppError('PIN sudah pernah dibuat', 409);
+  }
+}
+
 module.exports = {
   register,
   login,
+  createPin,
   logout,
   getProfile,
   updateProfile,

@@ -13,6 +13,15 @@ exports.login = wrap(async (req, res) => {
   res.json({ success: true, message: 'Login berhasil', data });
 });
 
+exports.setupPin = wrap(async (req, res) => {
+  await authService.createPin(req.user.id, req.body.pin);
+
+  res.status(201).json({
+    success: true,
+    message: 'PIN berhasil dibuat',
+  });
+});
+
 exports.logout = wrap(async (req, res) => {
   await authService.logout(req.user.id);
   res.json({ success: true, message: 'Logout berhasil' });
