@@ -5,6 +5,7 @@ import 'dart:async';
 import '../../../core/theme/app_theme.dart';
 import '../models/transaction_model.dart';
 import '../services/transaction_service.dart';
+import 'transaction_detail_page.dart';
 
 enum SortOption { newest, oldest }
 
@@ -366,92 +367,108 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
     final String sign = isFailed ? '' : (isIncoming ? '+' : '-');
 
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.card.withValues(alpha: 0.7)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: transactionColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TransactionDetailPage(
+                transactionId: transaction.id,
+              ),
             ),
-            child: Icon(
-              _getIcon(transaction.type),
-              color: transactionColor,
-              size: 23,
-            ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.card.withValues(alpha: 0.7)),
           ),
-
-          const SizedBox(width: 13),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _getTitle(transaction),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.text,
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  transaction.counterpartName ??
-                      transaction.description ??
-                      'myFTI Transaction',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-
-                const SizedBox(height: 5),
-
-                Text(
-                  '${_formatDate(transaction.createdAt)} • ${_formatTime(transaction.createdAt)}',
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 8),
-
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: Row(
             children: [
-              Text(
-                '$sign${_formatCurrency(transaction.amount)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: transactionColor.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  _getIcon(transaction.type),
                   color: transactionColor,
+                  size: 23,
                 ),
               ),
 
-              const SizedBox(height: 5),
+              const SizedBox(width: 13),
 
-              Text(
-                transaction.status,
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                  color: isFailed ? AppColors.error : AppColors.success,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _getTitle(transaction),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.text,
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    Text(
+                      transaction.counterpartName ??
+                          transaction.description ??
+                          'myFTI Transaction',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    Text(
+                      '${_formatDate(transaction.createdAt)} • ${_formatTime(transaction.createdAt)}',
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ],
                 ),
+              ),
+
+              const SizedBox(width: 8),
+
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '$sign${_formatCurrency(transaction.amount)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: transactionColor,
+                    ),
+                  ),
+
+                  const SizedBox(height: 5),
+
+                  Text(
+                    transaction.status,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: isFailed ? AppColors.error : AppColors.success,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

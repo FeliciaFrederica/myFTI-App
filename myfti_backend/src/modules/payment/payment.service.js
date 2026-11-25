@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const { Prisma } = require("../../generated/prisma/client");
 const prisma = require("../../config/prisma");
 const verifyTransactionPin = require("../../utils/verify-transaction-pin");
+const { notify, formatRupiah } = require("../../utils/notify");
 
 const MAX_RETRIES = 3;
 const MAX_WALLET_BALANCE = 2147483647;
@@ -188,6 +189,20 @@ const createPayment = async (studentId, data) => {
             where: { userId: studentId },
             select: { balance: true },
           });
+
+          await notify(
+            tx,
+            studentId,
+            "Pembayaran berhasil",
+            `Pembayaran ${formatRupiah(amount)} ke ${merchant.fullName} berhasil.`
+          );
+
+          await notify(
+            tx,
+            merchant.id,
+            "Pembayaran masuk",
+            `Kamu menerima pembayaran ${formatRupiah(amount)} dari ${student.fullName}.`
+          );
 
           return {
             reference,
