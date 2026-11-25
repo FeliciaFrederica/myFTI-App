@@ -7,6 +7,14 @@ const { notify, formatRupiah } = require("../../utils/notify");
 const MAX_RETRIES = 3;
 const MAX_WALLET_BALANCE = 2147483647;
 
+const MERCHANT_SUBCATEGORIES = {
+  KANTIN: ["Warmindo", "Kantin Teknik", "Kantin Cuweg"],
+  JUKEL_PO: ["Jukel DPM", "PO BEM", "PO DPM"],
+  AKADEMIK: ["BPP", "SPP"],
+  ALLEYWAY: [],
+  PRINT: [],
+};
+
 const getPaymentRecipients = async () => {
   const merchants = await prisma.user.findMany({
     where: {
@@ -40,6 +48,10 @@ const getPaymentRecipients = async () => {
 
 const createPayment = async (studentId, data) => {
   const { merchantId, pin } = data;
+  const subcategory =
+    typeof data.subcategory === "string" && data.subcategory.trim()
+      ? data.subcategory.trim()
+      : null;
   const amount = Number(data.amount);
   const description =
     typeof data.description === "string"
@@ -96,6 +108,26 @@ const createPayment = async (studentId, data) => {
             throw Object.assign(new Error("Invalid payment category"), {
               statusCode: 400,
             });
+          }
+
+          const allowedSubcategories =
+            MERCHANT_SUBCATEGORIES[merchant.merchantCategory];
+
+          if (
+            allowedSubcategories.length > 0 &&
+            !allowedSubcategories.includes(subcategory)
+          ) {
+            throw Object.assign(
+              new Error("Pilih submerchant pembayaran yang valid."),
+              { statusCode: 400 }
+            );
+          }
+
+          if (allowedSubcategories.length === 0 && subcategory !== null) {
+            throw Object.assign(
+              new Error("Kategori ini tidak menggunakan submerchant."),
+              { statusCode: 400 }
+            );
           }
           
           if (!student || student.role !== "STUDENT") {
@@ -168,6 +200,7 @@ const createPayment = async (studentId, data) => {
                 amount,
                 description:
                   description || `Payment to ${merchant.fullName}`,
+                subcategory,
                 userId: studentId,
                 transferGroupId: groupId,
                 counterpartName: merchant.fullName,
@@ -178,6 +211,7 @@ const createPayment = async (studentId, data) => {
                 amount,
                 description:
                   description || `Payment from ${student.fullName}`,
+                subcategory,
                 userId: merchant.id,
                 transferGroupId: groupId,
                 counterpartName: student.fullName,

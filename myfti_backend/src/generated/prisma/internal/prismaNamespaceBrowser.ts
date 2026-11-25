@@ -110,6 +110,7 @@ export const TransactionScalarFieldEnum = {
   status: 'status',
   amount: 'amount',
   description: 'description',
+  subcategory: 'subcategory',
   userId: 'userId',
   transferGroupId: 'transferGroupId',
   counterpartName: 'counterpartName',

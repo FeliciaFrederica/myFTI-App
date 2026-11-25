@@ -41,6 +41,7 @@ export type TransactionMinAggregateOutputType = {
   status: $Enums.TransactionStatus | null
   amount: number | null
   description: string | null
+  subcategory: string | null
   userId: string | null
   transferGroupId: string | null
   counterpartName: string | null
@@ -56,6 +57,7 @@ export type TransactionMaxAggregateOutputType = {
   status: $Enums.TransactionStatus | null
   amount: number | null
   description: string | null
+  subcategory: string | null
   userId: string | null
   transferGroupId: string | null
   counterpartName: string | null
@@ -71,6 +73,7 @@ export type TransactionCountAggregateOutputType = {
   status: number
   amount: number
   description: number
+  subcategory: number
   userId: number
   transferGroupId: number
   counterpartName: number
@@ -96,6 +99,7 @@ export type TransactionMinAggregateInputType = {
   status?: true
   amount?: true
   description?: true
+  subcategory?: true
   userId?: true
   transferGroupId?: true
   counterpartName?: true
@@ -111,6 +115,7 @@ export type TransactionMaxAggregateInputType = {
   status?: true
   amount?: true
   description?: true
+  subcategory?: true
   userId?: true
   transferGroupId?: true
   counterpartName?: true
@@ -126,6 +131,7 @@ export type TransactionCountAggregateInputType = {
   status?: true
   amount?: true
   description?: true
+  subcategory?: true
   userId?: true
   transferGroupId?: true
   counterpartName?: true
@@ -228,6 +234,7 @@ export type TransactionGroupByOutputType = {
   status: $Enums.TransactionStatus
   amount: number
   description: string | null
+  subcategory: string | null
   userId: string
   transferGroupId: string | null
   counterpartName: string | null
@@ -266,6 +273,7 @@ export type TransactionWhereInput = {
   status?: Prisma.EnumTransactionStatusFilter<"Transaction"> | $Enums.TransactionStatus
   amount?: Prisma.IntFilter<"Transaction"> | number
   description?: Prisma.StringNullableFilter<"Transaction"> | string | null
+  subcategory?: Prisma.StringNullableFilter<"Transaction"> | string | null
   userId?: Prisma.StringFilter<"Transaction"> | string
   transferGroupId?: Prisma.StringNullableFilter<"Transaction"> | string | null
   counterpartName?: Prisma.StringNullableFilter<"Transaction"> | string | null
@@ -282,6 +290,7 @@ export type TransactionOrderByWithRelationInput = {
   status?: Prisma.SortOrder
   amount?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  subcategory?: Prisma.SortOrderInput | Prisma.SortOrder
   userId?: Prisma.SortOrder
   transferGroupId?: Prisma.SortOrderInput | Prisma.SortOrder
   counterpartName?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -301,6 +310,7 @@ export type TransactionWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.EnumTransactionStatusFilter<"Transaction"> | $Enums.TransactionStatus
   amount?: Prisma.IntFilter<"Transaction"> | number
   description?: Prisma.StringNullableFilter<"Transaction"> | string | null
+  subcategory?: Prisma.StringNullableFilter<"Transaction"> | string | null
   userId?: Prisma.StringFilter<"Transaction"> | string
   transferGroupId?: Prisma.StringNullableFilter<"Transaction"> | string | null
   counterpartName?: Prisma.StringNullableFilter<"Transaction"> | string | null
@@ -317,6 +327,7 @@ export type TransactionOrderByWithAggregationInput = {
   status?: Prisma.SortOrder
   amount?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  subcategory?: Prisma.SortOrderInput | Prisma.SortOrder
   userId?: Prisma.SortOrder
   transferGroupId?: Prisma.SortOrderInput | Prisma.SortOrder
   counterpartName?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -340,6 +351,7 @@ export type TransactionScalarWhereWithAggregatesInput = {
   status?: Prisma.EnumTransactionStatusWithAggregatesFilter<"Transaction"> | $Enums.TransactionStatus
   amount?: Prisma.IntWithAggregatesFilter<"Transaction"> | number
   description?: Prisma.StringNullableWithAggregatesFilter<"Transaction"> | string | null
+  subcategory?: Prisma.StringNullableWithAggregatesFilter<"Transaction"> | string | null
   userId?: Prisma.StringWithAggregatesFilter<"Transaction"> | string
   transferGroupId?: Prisma.StringNullableWithAggregatesFilter<"Transaction"> | string | null
   counterpartName?: Prisma.StringNullableWithAggregatesFilter<"Transaction"> | string | null
@@ -355,6 +367,7 @@ export type TransactionCreateInput = {
   status?: $Enums.TransactionStatus
   amount: number
   description?: string | null
+  subcategory?: string | null
   transferGroupId?: string | null
   counterpartName?: string | null
   bankCode?: string | null
@@ -370,6 +383,7 @@ export type TransactionUncheckedCreateInput = {
   status?: $Enums.TransactionStatus
   amount: number
   description?: string | null
+  subcategory?: string | null
   userId: string
   transferGroupId?: string | null
   counterpartName?: string | null
@@ -385,6 +399,7 @@ export type TransactionUpdateInput = {
   status?: Prisma.EnumTransactionStatusFieldUpdateOperationsInput | $Enums.TransactionStatus
   amount?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subcategory?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transferGroupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   counterpartName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -400,6 +415,7 @@ export type TransactionUncheckedUpdateInput = {
   status?: Prisma.EnumTransactionStatusFieldUpdateOperationsInput | $Enums.TransactionStatus
   amount?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subcategory?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   transferGroupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   counterpartName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -415,6 +431,7 @@ export type TransactionCreateManyInput = {
   status?: $Enums.TransactionStatus
   amount: number
   description?: string | null
+  subcategory?: string | null
   userId: string
   transferGroupId?: string | null
   counterpartName?: string | null
@@ -430,6 +447,7 @@ export type TransactionUpdateManyMutationInput = {
   status?: Prisma.EnumTransactionStatusFieldUpdateOperationsInput | $Enums.TransactionStatus
   amount?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subcategory?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transferGroupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   counterpartName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -444,6 +462,7 @@ export type TransactionUncheckedUpdateManyInput = {
   status?: Prisma.EnumTransactionStatusFieldUpdateOperationsInput | $Enums.TransactionStatus
   amount?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subcategory?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   transferGroupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   counterpartName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -469,6 +488,7 @@ export type TransactionCountOrderByAggregateInput = {
   status?: Prisma.SortOrder
   amount?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  subcategory?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   transferGroupId?: Prisma.SortOrder
   counterpartName?: Prisma.SortOrder
@@ -488,6 +508,7 @@ export type TransactionMaxOrderByAggregateInput = {
   status?: Prisma.SortOrder
   amount?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  subcategory?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   transferGroupId?: Prisma.SortOrder
   counterpartName?: Prisma.SortOrder
@@ -503,6 +524,7 @@ export type TransactionMinOrderByAggregateInput = {
   status?: Prisma.SortOrder
   amount?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  subcategory?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   transferGroupId?: Prisma.SortOrder
   counterpartName?: Prisma.SortOrder
@@ -572,6 +594,7 @@ export type TransactionCreateWithoutUserInput = {
   status?: $Enums.TransactionStatus
   amount: number
   description?: string | null
+  subcategory?: string | null
   transferGroupId?: string | null
   counterpartName?: string | null
   bankCode?: string | null
@@ -586,6 +609,7 @@ export type TransactionUncheckedCreateWithoutUserInput = {
   status?: $Enums.TransactionStatus
   amount: number
   description?: string | null
+  subcategory?: string | null
   transferGroupId?: string | null
   counterpartName?: string | null
   bankCode?: string | null
@@ -629,6 +653,7 @@ export type TransactionScalarWhereInput = {
   status?: Prisma.EnumTransactionStatusFilter<"Transaction"> | $Enums.TransactionStatus
   amount?: Prisma.IntFilter<"Transaction"> | number
   description?: Prisma.StringNullableFilter<"Transaction"> | string | null
+  subcategory?: Prisma.StringNullableFilter<"Transaction"> | string | null
   userId?: Prisma.StringFilter<"Transaction"> | string
   transferGroupId?: Prisma.StringNullableFilter<"Transaction"> | string | null
   counterpartName?: Prisma.StringNullableFilter<"Transaction"> | string | null
@@ -644,6 +669,7 @@ export type TransactionCreateManyUserInput = {
   status?: $Enums.TransactionStatus
   amount: number
   description?: string | null
+  subcategory?: string | null
   transferGroupId?: string | null
   counterpartName?: string | null
   bankCode?: string | null
@@ -658,6 +684,7 @@ export type TransactionUpdateWithoutUserInput = {
   status?: Prisma.EnumTransactionStatusFieldUpdateOperationsInput | $Enums.TransactionStatus
   amount?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subcategory?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transferGroupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   counterpartName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -672,6 +699,7 @@ export type TransactionUncheckedUpdateWithoutUserInput = {
   status?: Prisma.EnumTransactionStatusFieldUpdateOperationsInput | $Enums.TransactionStatus
   amount?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subcategory?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transferGroupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   counterpartName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -686,6 +714,7 @@ export type TransactionUncheckedUpdateManyWithoutUserInput = {
   status?: Prisma.EnumTransactionStatusFieldUpdateOperationsInput | $Enums.TransactionStatus
   amount?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subcategory?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transferGroupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   counterpartName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -702,6 +731,7 @@ export type TransactionSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   status?: boolean
   amount?: boolean
   description?: boolean
+  subcategory?: boolean
   userId?: boolean
   transferGroupId?: boolean
   counterpartName?: boolean
@@ -718,6 +748,7 @@ export type TransactionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   status?: boolean
   amount?: boolean
   description?: boolean
+  subcategory?: boolean
   userId?: boolean
   transferGroupId?: boolean
   counterpartName?: boolean
@@ -734,6 +765,7 @@ export type TransactionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   status?: boolean
   amount?: boolean
   description?: boolean
+  subcategory?: boolean
   userId?: boolean
   transferGroupId?: boolean
   counterpartName?: boolean
@@ -750,6 +782,7 @@ export type TransactionSelectScalar = {
   status?: boolean
   amount?: boolean
   description?: boolean
+  subcategory?: boolean
   userId?: boolean
   transferGroupId?: boolean
   counterpartName?: boolean
@@ -758,7 +791,7 @@ export type TransactionSelectScalar = {
   createdAt?: boolean
 }
 
-export type TransactionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "reference" | "type" | "status" | "amount" | "description" | "userId" | "transferGroupId" | "counterpartName" | "bankCode" | "accountNumber" | "createdAt", ExtArgs["result"]["transaction"]>
+export type TransactionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "reference" | "type" | "status" | "amount" | "description" | "subcategory" | "userId" | "transferGroupId" | "counterpartName" | "bankCode" | "accountNumber" | "createdAt", ExtArgs["result"]["transaction"]>
 export type TransactionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -781,6 +814,7 @@ export type $TransactionPayload<ExtArgs extends runtime.Types.Extensions.Interna
     status: $Enums.TransactionStatus
     amount: number
     description: string | null
+    subcategory: string | null
     userId: string
     transferGroupId: string | null
     counterpartName: string | null
@@ -1217,6 +1251,7 @@ export interface TransactionFieldRefs {
   readonly status: Prisma.FieldRef<"Transaction", 'TransactionStatus'>
   readonly amount: Prisma.FieldRef<"Transaction", 'Int'>
   readonly description: Prisma.FieldRef<"Transaction", 'String'>
+  readonly subcategory: Prisma.FieldRef<"Transaction", 'String'>
   readonly userId: Prisma.FieldRef<"Transaction", 'String'>
   readonly transferGroupId: Prisma.FieldRef<"Transaction", 'String'>
   readonly counterpartName: Prisma.FieldRef<"Transaction", 'String'>

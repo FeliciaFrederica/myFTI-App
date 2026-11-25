@@ -54,7 +54,7 @@ const topUp = async (req, res) => {
       });
     }
 
-    const result = await walletService.topUp(userId, amount, pipeToSync);
+    const result = await walletService.topUp(userId, amount, pin);
 
     if (!result) {
       return res.status(404).json({
