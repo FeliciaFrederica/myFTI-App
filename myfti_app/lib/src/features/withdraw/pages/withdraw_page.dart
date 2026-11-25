@@ -33,7 +33,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
   final TextEditingController _accountNumberController =
       TextEditingController();
-  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _amountController =
+      TextEditingController();
 
   Map<String, dynamic>? _wallet;
   List<Map<String, dynamic>> _savedAccounts = [];
@@ -248,9 +249,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
       if (value.trim().isEmpty) {
         _amountError = null;
       } else if (amount < WithdrawService.minWithdraw) {
-        _amountError = 'Minimal withdraw adalah Rp10.000.';
-      } else if (amount > _balance) {
-        _amountError = 'Saldo kamu tidak mencukupi.';
+        _amountError = 'Minimal penarikan saldo adalah Rp10.000.';
       } else {
         _amountError = null;
       }
@@ -308,10 +307,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
         _amountError = 'Masukkan nominal withdraw.';
         isValid = false;
       } else if (_amount < WithdrawService.minWithdraw) {
-        _amountError = 'Minimal withdraw adalah Rp10.000.';
-        isValid = false;
-      } else if (_amount > _balance) {
-        _amountError = 'Saldo kamu tidak mencukupi.';
+        _amountError = 'Minimal penarikan saldo adalah Rp10.000.';
         isValid = false;
       }
     });
@@ -347,6 +343,16 @@ class _WithdrawPageState extends State<WithdrawPage> {
   // Menampilkan konfirmasi withdraw
   Future<void> _showConfirmation() async {
     if (!_canContinueWithdraw || !_validateForm()) return;
+
+    // Memeriksa kecukupan saldo sebelum konfirmasi dan verifikasi PIN
+    if (_amount > _balance) {
+      TopNotice.show(
+        context,
+        'Saldo kamu tidak mencukupi.',
+        success: false,
+      );
+      return;
+    }
 
     final destination = _getDestination();
 
