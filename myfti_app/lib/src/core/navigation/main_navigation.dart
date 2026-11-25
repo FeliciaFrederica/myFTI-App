@@ -15,12 +15,29 @@ class MainNavigation extends StatefulWidget {
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  void _switchTab(int index) {
-    if (index >= 0 && index < _pages.length) {
+  double _pageOpacity = 1.0;
+
+ void _switchTab(int index) {
+    if (index < 0 || index >= _pages.length || index == _currentIndex) {
+      return;
+    }
+
+    if (index == 1) {
+      _walletKey.currentState?.hideBalance();
+    }
+
+    setState(() {
+      _pageOpacity = 0.0;
+    });
+
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (!mounted) return;
+
       setState(() {
         _currentIndex = index;
+        _pageOpacity = 1.0;
       });
-    }
+    });
   }
 
   int _currentIndex = 0;
@@ -29,8 +46,8 @@ class _MainNavigationState extends State<MainNavigation> {
   static const Color backgroundColor = Color(0xFFF8F6FC);
 
   late final List<Widget> _pages = [
-    HomePage(),
-    MyWalletPage(onHistoryTap: () => _switchTab(2)),
+    HomePage(onProfileTap: () => _switchTab(3)),
+    MyWalletPage(key: _walletKey, onHistoryTap: () => _switchTab(2)),
     TransactionHistoryPage(),
     ProfilePage(),
   ];
@@ -42,28 +59,35 @@ class _MainNavigationState extends State<MainNavigation> {
     Icons.person_outline,
   ];
 
-  final List<String> _labels = ['Home', 'Wallet', 'History', 'Profile'];
-
+  final List<String> _labels = ['Beranda', 'Dompet', 'Riwayat', 'Profil'];
+  final GlobalKey<MyWalletPageState> _walletKey = GlobalKey<MyWalletPageState>();
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-
-      // Allow page content to extend behind the navbar
       extendBody: true,
 
-      body: IndexedStack(index: _currentIndex, children: _pages),
+      body: AnimatedOpacity(
+        opacity: _pageOpacity,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _pages,
+        ),
+      ),
 
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 35, 16, 12),
+          padding: const EdgeInsets.only(top: 30),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final itemWidth = constraints.maxWidth / _icons.length;
 
               return SizedBox(
-                height: 72,
+                height: 85,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -71,7 +95,9 @@ class _MainNavigationState extends State<MainNavigation> {
                     Positioned.fill(
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(26),
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(24),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: primaryPurple.withValues(alpha: 0.10),
@@ -81,15 +107,19 @@ class _MainNavigationState extends State<MainNavigation> {
                           ],
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(26),
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(24),
+                          ),
                           child: BackdropFilter(
                             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.45),
-                                borderRadius: BorderRadius.circular(26),
+                                color: const Color(0xFFEDE7F6).withValues(alpha: 0.45),
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(24),
+                                ),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.5),
+                                  color: const Color(0xFFD1C4E9).withValues(alpha: 0.65),
                                   width: 1,
                                 ),
                               ),
@@ -100,15 +130,9 @@ class _MainNavigationState extends State<MainNavigation> {
                                   return Expanded(
                                     child: InkWell(
                                       borderRadius: BorderRadius.circular(26),
-                                      onTap: () {
-                                        if (index < _pages.length) {
-                                          setState(() {
-                                            _currentIndex = index;
-                                          });
-                                        }
-                                      },
+                                      onTap: () => _switchTab(index),
                                       child: Padding(
-                                        padding: const EdgeInsets.only(top: 23),
+                                        padding: const EdgeInsets.only(top: 2),
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [

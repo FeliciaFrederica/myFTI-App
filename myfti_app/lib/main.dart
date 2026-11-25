@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'src/core/navigation/main_navigation.dart';
 import 'src/features/authentication/pages/login_page.dart';
 import 'src/features/authentication/pages/register_page.dart';
-import 'src/features/authentication/pages/settings_page.dart';
 import 'src/features/authentication/pages/splash_page.dart';
 import 'src/features/merchant/pages/merchant_home_page.dart';
 import 'src/features/notification/services/local_notification_service.dart';
@@ -62,8 +61,7 @@ class MyApp extends StatelessWidget {
         '/login': (_) => LoginScreen(),
         '/register': (_) => RegisterScreen(),
         '/home': (_) => const MainNavigation(),
-        '/merchant': (_) => const MerchantHomePage(), 
-        '/settings': (_) => SettingsScreen(),
+        '/merchant': (_) => const MerchantHomePage(),
       },
     );
   }

@@ -10,7 +10,12 @@ import 'transaction_detail_page.dart';
 enum SortOption { newest, oldest }
 
 class TransactionHistoryPage extends StatefulWidget {
-  const TransactionHistoryPage({super.key});
+  final bool showBackButton;
+
+  const TransactionHistoryPage({
+    super.key, 
+    this.showBackButton = false,
+  });
 
   @override
   State<TransactionHistoryPage> createState() => _TransactionHistoryPageState();
@@ -391,7 +396,12 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         appBar: AppBar(
           backgroundColor: AppColors.background,
           elevation: 0,
-          automaticallyImplyLeading: false,
+          automaticallyImplyLeading: widget.showBackButton,
+
+          iconTheme: const IconThemeData(
+            color: Colors.black,
+          ),
+
           title: const Text(
             'Transaction History',
             style: TextStyle(

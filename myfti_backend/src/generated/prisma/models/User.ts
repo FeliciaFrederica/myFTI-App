@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.ts"
-import type * as Prisma from "../internal/prismaNamespace.ts"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model User
@@ -40,6 +40,7 @@ export type UserMinAggregateOutputType = {
   email: string | null
   nim: string | null
   passwordHash: string | null
+  avatarUrl: string | null
   role: $Enums.UserRole | null
   merchantCategory: $Enums.MerchantCategory | null
   createdAt: Date | null
@@ -53,6 +54,7 @@ export type UserMaxAggregateOutputType = {
   email: string | null
   nim: string | null
   passwordHash: string | null
+  avatarUrl: string | null
   role: $Enums.UserRole | null
   merchantCategory: $Enums.MerchantCategory | null
   createdAt: Date | null
@@ -66,6 +68,7 @@ export type UserCountAggregateOutputType = {
   email: number
   nim: number
   passwordHash: number
+  avatarUrl: number
   role: number
   merchantCategory: number
   createdAt: number
@@ -89,6 +92,7 @@ export type UserMinAggregateInputType = {
   email?: true
   nim?: true
   passwordHash?: true
+  avatarUrl?: true
   role?: true
   merchantCategory?: true
   createdAt?: true
@@ -102,6 +106,7 @@ export type UserMaxAggregateInputType = {
   email?: true
   nim?: true
   passwordHash?: true
+  avatarUrl?: true
   role?: true
   merchantCategory?: true
   createdAt?: true
@@ -115,6 +120,7 @@ export type UserCountAggregateInputType = {
   email?: true
   nim?: true
   passwordHash?: true
+  avatarUrl?: true
   role?: true
   merchantCategory?: true
   createdAt?: true
@@ -215,6 +221,7 @@ export type UserGroupByOutputType = {
   email: string
   nim: string | null
   passwordHash: string
+  avatarUrl: string | null
   role: $Enums.UserRole
   merchantCategory: $Enums.MerchantCategory | null
   createdAt: Date
@@ -251,6 +258,7 @@ export type UserWhereInput = {
   email?: Prisma.StringFilter<"User"> | string
   nim?: Prisma.StringNullableFilter<"User"> | string | null
   passwordHash?: Prisma.StringFilter<"User"> | string
+  avatarUrl?: Prisma.StringNullableFilter<"User"> | string | null
   role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
   merchantCategory?: Prisma.EnumMerchantCategoryNullableFilter<"User"> | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
@@ -268,6 +276,7 @@ export type UserOrderByWithRelationInput = {
   email?: Prisma.SortOrder
   nim?: Prisma.SortOrderInput | Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   role?: Prisma.SortOrder
   merchantCategory?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -288,6 +297,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
   fullName?: Prisma.StringFilter<"User"> | string
   passwordHash?: Prisma.StringFilter<"User"> | string
+  avatarUrl?: Prisma.StringNullableFilter<"User"> | string | null
   role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
   merchantCategory?: Prisma.EnumMerchantCategoryNullableFilter<"User"> | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
@@ -305,6 +315,7 @@ export type UserOrderByWithAggregationInput = {
   email?: Prisma.SortOrder
   nim?: Prisma.SortOrderInput | Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   role?: Prisma.SortOrder
   merchantCategory?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -326,6 +337,7 @@ export type UserScalarWhereWithAggregatesInput = {
   email?: Prisma.StringWithAggregatesFilter<"User"> | string
   nim?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   passwordHash?: Prisma.StringWithAggregatesFilter<"User"> | string
+  avatarUrl?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   role?: Prisma.EnumUserRoleWithAggregatesFilter<"User"> | $Enums.UserRole
   merchantCategory?: Prisma.EnumMerchantCategoryNullableWithAggregatesFilter<"User"> | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
@@ -339,6 +351,7 @@ export type UserCreateInput = {
   email: string
   nim?: string | null
   passwordHash: string
+  avatarUrl?: string | null
   role?: $Enums.UserRole
   merchantCategory?: $Enums.MerchantCategory | null
   createdAt?: Date | string
@@ -356,6 +369,7 @@ export type UserUncheckedCreateInput = {
   email: string
   nim?: string | null
   passwordHash: string
+  avatarUrl?: string | null
   role?: $Enums.UserRole
   merchantCategory?: $Enums.MerchantCategory | null
   createdAt?: Date | string
@@ -373,6 +387,7 @@ export type UserUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   nim?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   merchantCategory?: Prisma.NullableEnumMerchantCategoryFieldUpdateOperationsInput | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -390,6 +405,7 @@ export type UserUncheckedUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   nim?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   merchantCategory?: Prisma.NullableEnumMerchantCategoryFieldUpdateOperationsInput | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -407,6 +423,7 @@ export type UserCreateManyInput = {
   email: string
   nim?: string | null
   passwordHash: string
+  avatarUrl?: string | null
   role?: $Enums.UserRole
   merchantCategory?: $Enums.MerchantCategory | null
   createdAt?: Date | string
@@ -420,6 +437,7 @@ export type UserUpdateManyMutationInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   nim?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   merchantCategory?: Prisma.NullableEnumMerchantCategoryFieldUpdateOperationsInput | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -433,6 +451,7 @@ export type UserUncheckedUpdateManyInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   nim?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   merchantCategory?: Prisma.NullableEnumMerchantCategoryFieldUpdateOperationsInput | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -446,6 +465,7 @@ export type UserCountOrderByAggregateInput = {
   email?: Prisma.SortOrder
   nim?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrder
   role?: Prisma.SortOrder
   merchantCategory?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -463,6 +483,7 @@ export type UserMaxOrderByAggregateInput = {
   email?: Prisma.SortOrder
   nim?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrder
   role?: Prisma.SortOrder
   merchantCategory?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -476,6 +497,7 @@ export type UserMinOrderByAggregateInput = {
   email?: Prisma.SortOrder
   nim?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrder
   role?: Prisma.SortOrder
   merchantCategory?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -582,6 +604,7 @@ export type UserCreateWithoutWalletInput = {
   email: string
   nim?: string | null
   passwordHash: string
+  avatarUrl?: string | null
   role?: $Enums.UserRole
   merchantCategory?: $Enums.MerchantCategory | null
   createdAt?: Date | string
@@ -598,6 +621,7 @@ export type UserUncheckedCreateWithoutWalletInput = {
   email: string
   nim?: string | null
   passwordHash: string
+  avatarUrl?: string | null
   role?: $Enums.UserRole
   merchantCategory?: $Enums.MerchantCategory | null
   createdAt?: Date | string
@@ -630,6 +654,7 @@ export type UserUpdateWithoutWalletInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   nim?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   merchantCategory?: Prisma.NullableEnumMerchantCategoryFieldUpdateOperationsInput | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -646,6 +671,7 @@ export type UserUncheckedUpdateWithoutWalletInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   nim?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   merchantCategory?: Prisma.NullableEnumMerchantCategoryFieldUpdateOperationsInput | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -662,6 +688,7 @@ export type UserCreateWithoutTransactionsInput = {
   email: string
   nim?: string | null
   passwordHash: string
+  avatarUrl?: string | null
   role?: $Enums.UserRole
   merchantCategory?: $Enums.MerchantCategory | null
   createdAt?: Date | string
@@ -678,6 +705,7 @@ export type UserUncheckedCreateWithoutTransactionsInput = {
   email: string
   nim?: string | null
   passwordHash: string
+  avatarUrl?: string | null
   role?: $Enums.UserRole
   merchantCategory?: $Enums.MerchantCategory | null
   createdAt?: Date | string
@@ -710,6 +738,7 @@ export type UserUpdateWithoutTransactionsInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   nim?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   merchantCategory?: Prisma.NullableEnumMerchantCategoryFieldUpdateOperationsInput | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -726,6 +755,7 @@ export type UserUncheckedUpdateWithoutTransactionsInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   nim?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   merchantCategory?: Prisma.NullableEnumMerchantCategoryFieldUpdateOperationsInput | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -742,6 +772,7 @@ export type UserCreateWithoutBankAccountsInput = {
   email: string
   nim?: string | null
   passwordHash: string
+  avatarUrl?: string | null
   role?: $Enums.UserRole
   merchantCategory?: $Enums.MerchantCategory | null
   createdAt?: Date | string
@@ -758,6 +789,7 @@ export type UserUncheckedCreateWithoutBankAccountsInput = {
   email: string
   nim?: string | null
   passwordHash: string
+  avatarUrl?: string | null
   role?: $Enums.UserRole
   merchantCategory?: $Enums.MerchantCategory | null
   createdAt?: Date | string
@@ -790,6 +822,7 @@ export type UserUpdateWithoutBankAccountsInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   nim?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   merchantCategory?: Prisma.NullableEnumMerchantCategoryFieldUpdateOperationsInput | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -806,6 +839,7 @@ export type UserUncheckedUpdateWithoutBankAccountsInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   nim?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   merchantCategory?: Prisma.NullableEnumMerchantCategoryFieldUpdateOperationsInput | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -822,6 +856,7 @@ export type UserCreateWithoutNotificationsInput = {
   email: string
   nim?: string | null
   passwordHash: string
+  avatarUrl?: string | null
   role?: $Enums.UserRole
   merchantCategory?: $Enums.MerchantCategory | null
   createdAt?: Date | string
@@ -838,6 +873,7 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   email: string
   nim?: string | null
   passwordHash: string
+  avatarUrl?: string | null
   role?: $Enums.UserRole
   merchantCategory?: $Enums.MerchantCategory | null
   createdAt?: Date | string
@@ -870,6 +906,7 @@ export type UserUpdateWithoutNotificationsInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   nim?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   merchantCategory?: Prisma.NullableEnumMerchantCategoryFieldUpdateOperationsInput | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -886,6 +923,7 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   nim?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   merchantCategory?: Prisma.NullableEnumMerchantCategoryFieldUpdateOperationsInput | $Enums.MerchantCategory | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -951,6 +989,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   email?: boolean
   nim?: boolean
   passwordHash?: boolean
+  avatarUrl?: boolean
   role?: boolean
   merchantCategory?: boolean
   createdAt?: boolean
@@ -969,6 +1008,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   email?: boolean
   nim?: boolean
   passwordHash?: boolean
+  avatarUrl?: boolean
   role?: boolean
   merchantCategory?: boolean
   createdAt?: boolean
@@ -982,6 +1022,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   email?: boolean
   nim?: boolean
   passwordHash?: boolean
+  avatarUrl?: boolean
   role?: boolean
   merchantCategory?: boolean
   createdAt?: boolean
@@ -995,6 +1036,7 @@ export type UserSelectScalar = {
   email?: boolean
   nim?: boolean
   passwordHash?: boolean
+  avatarUrl?: boolean
   role?: boolean
   merchantCategory?: boolean
   createdAt?: boolean
@@ -1002,7 +1044,7 @@ export type UserSelectScalar = {
   tokenVersion?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "fullName" | "email" | "nim" | "passwordHash" | "role" | "merchantCategory" | "createdAt" | "updatedAt" | "tokenVersion", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "fullName" | "email" | "nim" | "passwordHash" | "avatarUrl" | "role" | "merchantCategory" | "createdAt" | "updatedAt" | "tokenVersion", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   wallet?: boolean | Prisma.User$walletArgs<ExtArgs>
   transactions?: boolean | Prisma.User$transactionsArgs<ExtArgs>
@@ -1027,6 +1069,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     email: string
     nim: string | null
     passwordHash: string
+    avatarUrl: string | null
     role: $Enums.UserRole
     merchantCategory: $Enums.MerchantCategory | null
     createdAt: Date
@@ -1464,6 +1507,7 @@ export interface UserFieldRefs {
   readonly email: Prisma.FieldRef<"User", 'String'>
   readonly nim: Prisma.FieldRef<"User", 'String'>
   readonly passwordHash: Prisma.FieldRef<"User", 'String'>
+  readonly avatarUrl: Prisma.FieldRef<"User", 'String'>
   readonly role: Prisma.FieldRef<"User", 'UserRole'>
   readonly merchantCategory: Prisma.FieldRef<"User", 'MerchantCategory'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>

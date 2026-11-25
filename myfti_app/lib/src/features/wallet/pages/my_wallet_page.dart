@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
-
+import 'package:myfti_app/src/core/widgets/top_notice.dart';
 import 'top_up_page.dart';
 
 class MyWalletPage extends StatefulWidget {
@@ -9,10 +10,10 @@ class MyWalletPage extends StatefulWidget {
   const MyWalletPage({super.key, this.onHistoryTap});
 
   @override
-  State<MyWalletPage> createState() => _MyWalletPageState();
+  MyWalletPageState createState() => MyWalletPageState();
 }
 
-class _MyWalletPageState extends State<MyWalletPage> {
+class MyWalletPageState extends State<MyWalletPage> {
   static const Color primaryPurple = Color(0xFF673AB7);
   static const Color backgroundColor = Color(0xFFF8F6FC);
   static const Color textColor = Color(0xFF2D1B46);
@@ -20,6 +21,8 @@ class _MyWalletPageState extends State<MyWalletPage> {
   final WalletService _walletService = WalletService();
 
   late Future<Map<String, dynamic>> _walletFuture;
+
+  bool _isBalanceVisible = false;
 
   @override
   void initState() {
@@ -29,6 +32,14 @@ class _MyWalletPageState extends State<MyWalletPage> {
 
   void _loadWallet() {
     _walletFuture = _walletService.getWallet();
+  }
+
+  void hideBalance() {
+    if (!mounted) return;
+
+    setState(() {
+      _isBalanceVisible = false;
+    });
   }
 
   String _formatRupiah(int amount) {
@@ -46,7 +57,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text(
-          'My Wallet',
+          'Dompet Saya',
           style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         backgroundColor: backgroundColor,
@@ -67,17 +78,39 @@ class _MyWalletPageState extends State<MyWalletPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Colors.red,
+                    size: 42,
+                  ),
                   const SizedBox(height: 12),
-                  const Text('Gagal mengambil data wallet.'),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
+                  const Text(
+                    'Gagal mengambil data wallet.',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
                     onPressed: () {
                       setState(() {
                         _loadWallet();
                       });
                     },
-                    child: const Text('Coba Lagi'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: primaryPurple,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                    ),
+                    child: const Text(
+                      'Coba Lagi',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -89,58 +122,161 @@ class _MyWalletPageState extends State<MyWalletPage> {
           final String walletId = wallet['walletId'] as String;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 170),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Wallet Balance
+                // Wallet Balance                
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF673AB7), Color(0xFF9575CD)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: primaryPurple,
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.account_balance_wallet_outlined,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Available Balance',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _formatRupiah(balance),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Stack(
+                      children: [
+                        // Dekorasi Mega Mendung
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: ShaderMask(
+                              shaderCallback: (Rect bounds) {
+                                return const LinearGradient(
+                                  begin: Alignment.centerRight,
+                                  end: Alignment.centerLeft,
+                                  colors: [
+                                    Colors.white,
+                                    Colors.white54,
+                                    Colors.transparent,
+                                  ],
+                                  stops: [0.0, 0.42, 0.72],
+                                ).createShader(bounds);
+                              },
+                              blendMode: BlendMode.dstIn,
+                              child: Opacity(
+                                opacity: 0.16,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    _buildCloudItem(
+                                      right: -25,
+                                      top: -20,
+                                      width: 170,
+                                      angle: -0.15,
+                                    ),
+                                    _buildCloudItem(
+                                      right: -15,
+                                      bottom: -25,
+                                      width: 150,
+                                      angle: 0.2,
+                                      flipX: true,
+                                    ),
+                                    _buildCloudItem(
+                                      right: 110,
+                                      top: 10,
+                                      width: 105,
+                                      angle: 0.25,
+                                      flipX: true,
+                                    ),
+                                    _buildCloudItem(
+                                      right: 95,
+                                      bottom: 5,
+                                      width: 120,
+                                      angle: -0.2,
+                                    ),
+                                    _buildCloudItem(
+                                      right: 185,
+                                      top: 45,
+                                      width: 85,
+                                      angle: -0.35,
+                                      flipX: true,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'myFTI Digital Wallet',
-                        style: TextStyle(color: Colors.white, fontSize: 14),
-                      ),
-                    ],
+
+                        // saldo
+                        Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.account_balance_wallet_outlined,
+                                    color: Colors.white,
+                                    size: 32,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Text(
+                                    'Dompet Digital myFTI',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              const Text(
+                                'Saldo Tersedia',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _isBalanceVisible
+                                          ? _formatRupiah(balance)
+                                          : 'Rp ••••••••',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _isBalanceVisible =
+                                            !_isBalanceVisible;
+                                      });
+                                    },
+                                    icon: Icon(
+                                      _isBalanceVisible
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                      color: Colors.white,
+                                    ),
+                                    tooltip: _isBalanceVisible
+                                        ? 'Sembunyikan saldo'
+                                        : 'Tampilkan saldo',
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-
                 const SizedBox(height: 28),
 
-                // Wallet Information
                 const Text(
-                  'Wallet Information',
+                  'Informasi Wallet',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -157,20 +293,45 @@ class _MyWalletPageState extends State<MyWalletPage> {
                     children: [
                       _buildInfoTile(
                         icon: Icons.credit_card,
-                        title: 'Wallet ID',
-                        subtitle: walletId,
+                        title: 'ID Dompet',
+                        subtitle: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(walletId),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () async {
+                                await Clipboard.setData(ClipboardData(text: walletId));
+
+                                if (!context.mounted) return;
+
+                                TopNotice.show(
+                                  context,
+                                  'ID Dompet berhasil disalin!',
+                                  success: true,
+                                  duration: const Duration(seconds: 2),
+                                );
+                              },
+                              child: const Icon(
+                                Icons.copy_rounded,
+                                size: 16,
+                                color: primaryPurple,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       _buildInfoTile(
                         icon: Icons.verified_user_outlined,
-                        title: 'Wallet Status',
-                        subtitle: 'Active',
+                        title: 'Status Dompet',
+                        subtitle: Text('Aktif'),
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       _buildInfoTile(
                         icon: Icons.account_balance_outlined,
-                        title: 'Account Type',
-                        subtitle: 'Student Wallet',
+                        title: 'Jenis Akun',
+                        subtitle: Text('Dompet Mahasiswa'),
                       ),
                     ],
                   ),
@@ -178,9 +339,8 @@ class _MyWalletPageState extends State<MyWalletPage> {
 
                 const SizedBox(height: 28),
 
-                // Quick Actions
                 const Text(
-                  'Wallet Actions',
+                  'Menu Dompet',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -197,16 +357,17 @@ class _MyWalletPageState extends State<MyWalletPage> {
                         icon: Icons.add_circle_outline,
                         label: 'Top Up',
                         onTap: () async {
-                          await Navigator.push(
+                          final result = await Navigator.push<bool>(
                             context,
                             MaterialPageRoute(
                               builder: (context) => const TopUpPage(),
                             ),
                           );
-
-                          setState(() {
-                            _loadWallet();
-                          });
+                          if (result == true && mounted) {
+                            setState(() {
+                              _loadWallet();
+                            });
+                          }
                         },
                       ),
                     ),
@@ -214,7 +375,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
                     Expanded(
                       child: _buildActionButton(
                         icon: Icons.receipt_long_outlined,
-                        label: 'History',
+                        label: 'Riwayat',
                         onTap: widget.onHistoryTap ?? () {},
                       ),
                     ),
@@ -228,10 +389,39 @@ class _MyWalletPageState extends State<MyWalletPage> {
     );
   }
 
+  Widget _buildCloudItem({
+    double? top,
+    double? bottom,
+    double? right,
+    double? left,
+    required double width,
+    double angle = 0,
+    bool flipX = false,
+  }) {
+    return Positioned(
+      top: top,
+      bottom: bottom,
+      right: right,
+      left: left,
+      child: Transform.rotate(
+        angle: angle,
+        child: Transform.flip(
+          flipX: flipX,
+          child: Image.asset(
+            'assets/images/mega_mendung.png',
+            width: width,
+            fit: BoxFit.contain,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInfoTile({
     required IconData icon,
     required String title,
-    required String subtitle,
+    required Widget subtitle,
   }) {
     return ListTile(
       leading: Container(
@@ -246,7 +436,7 @@ class _MyWalletPageState extends State<MyWalletPage> {
         title,
         style: const TextStyle(fontWeight: FontWeight.w600, color: textColor),
       ),
-      subtitle: Text(subtitle),
+      subtitle: subtitle,
     );
   }
 
