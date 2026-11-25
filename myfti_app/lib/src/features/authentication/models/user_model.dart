@@ -6,6 +6,7 @@ class UserModel {
   final String walletId;
   final num balance;
   final String role;
+  final String? avatar;
 
   UserModel({
     required this.id,
@@ -15,12 +16,16 @@ class UserModel {
     required this.walletId,
     required this.balance,
     required this.role,
+    this.avatar,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     final wallet = json['wallet'] is Map
         ? Map<String, dynamic>.from(json['wallet'])
         : <String, dynamic>{};
+
+    // Foto profil dari server (data URL base64), kosong dianggap tidak ada foto
+    final avatar = json['avatarUrl'] ?? json['avatar'];
 
     return UserModel(
       id: (json['id'] ?? json['user_id'] ?? '').toString(),
@@ -36,6 +41,9 @@ class UserModel {
           ) ??
           0,
       role: (json['role'] ?? 'STUDENT').toString(),
+      avatar: (avatar == null || avatar.toString().isEmpty)
+          ? null
+          : avatar.toString(),
     );
   }
 
@@ -47,9 +55,10 @@ class UserModel {
     'wallet_id': walletId,
     'balance': balance,
     'role': role,
+    'avatar': avatar,
   };
 
-  /// Inisial untuk CircleAvatar, contoh "Budi Santoso" -> "BS"
+  // Inisial untuk CircleAvatar, contoh "Budi Santoso" -> "BS"
   String get initials {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts.first.isEmpty) return '?';
