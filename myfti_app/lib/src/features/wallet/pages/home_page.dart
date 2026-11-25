@@ -24,7 +24,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   static const Color primaryPurple = Color(0xFF673AB7);
-  static const Color backgroundColor = Color(0xFFF8F6FC);
   static const Color textColor = Color(0xFF2D1B46);
 
   final WalletService _walletService = WalletService();

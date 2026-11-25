@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
 
 import 'top_up_page.dart';
@@ -271,19 +272,44 @@ class MyWalletPageState extends State<MyWalletPage> {
                       _buildInfoTile(
                         icon: Icons.credit_card,
                         title: 'ID Dompet',
-                        subtitle: walletId,
+                        subtitle: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(walletId),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () async {
+                                await Clipboard.setData(ClipboardData(text: walletId));
+
+                                if (!context.mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('ID Dompet berhasil disalin!'),
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
+                              },
+                              child: const Icon(
+                                Icons.copy_rounded,
+                                size: 16,
+                                color: primaryPurple,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       _buildInfoTile(
                         icon: Icons.verified_user_outlined,
                         title: 'Status Dompet',
-                        subtitle: 'Aktif',
+                        subtitle: Text('Aktif'),
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       _buildInfoTile(
                         icon: Icons.account_balance_outlined,
                         title: 'Jenis Akun',
-                        subtitle: 'Dompet Mahasiswa',
+                        subtitle: Text('Dompet Mahasiswa'),
                       ),
                     ],
                   ),
@@ -373,7 +399,7 @@ class MyWalletPageState extends State<MyWalletPage> {
   Widget _buildInfoTile({
     required IconData icon,
     required String title,
-    required String subtitle,
+    required Widget subtitle,
   }) {
     return ListTile(
       leading: Container(
@@ -388,7 +414,7 @@ class MyWalletPageState extends State<MyWalletPage> {
         title,
         style: const TextStyle(fontWeight: FontWeight.w600, color: textColor),
       ),
-      subtitle: Text(subtitle),
+      subtitle: subtitle,
     );
   }
 
