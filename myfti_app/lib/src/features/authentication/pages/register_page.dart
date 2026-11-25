@@ -137,8 +137,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   icon: Icons.person_outline,
                                   textInputAction: TextInputAction.next,
                                   validator: (v) {
-                                    if (v == null ||
-                                        v.trim().length < _kMinName) {
+                                    final name = v?.trim() ?? '';
+                                    // Nama hanya boleh huruf
+                                    if (name.isNotEmpty &&
+                                        !RegExp(r"^[\p{L}\s.'\-]+$",
+                                                unicode: true)
+                                            .hasMatch(name)) {
+                                      return 'Nama hanya boleh berisi huruf';
+                                    }
+                                    if (name.length < _kMinName) {
                                       return 'Nama lengkap minimal $_kMinName karakter';
                                     }
                                     return null;
