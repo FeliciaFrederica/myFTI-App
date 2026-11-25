@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
-
+import 'package:myfti_app/src/core/widgets/top_notice.dart';
 import 'top_up_page.dart';
 
 class MyWalletPage extends StatefulWidget {
@@ -78,17 +78,39 @@ class MyWalletPageState extends State<MyWalletPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Colors.red,
+                    size: 42,
+                  ),
                   const SizedBox(height: 12),
-                  const Text('Gagal mengambil data wallet.'),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
+                  const Text(
+                    'Gagal mengambil data wallet.',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
                     onPressed: () {
                       setState(() {
                         _loadWallet();
                       });
                     },
-                    child: const Text('Coba Lagi'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: primaryPurple,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                    ),
+                    child: const Text(
+                      'Coba Lagi',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -283,11 +305,11 @@ class MyWalletPageState extends State<MyWalletPage> {
 
                                 if (!context.mounted) return;
 
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('ID Dompet berhasil disalin!'),
-                                    duration: Duration(seconds: 1),
-                                  ),
+                                TopNotice.show(
+                                  context,
+                                  'ID Dompet berhasil disalin!',
+                                  success: true,
+                                  duration: const Duration(seconds: 2),
                                 );
                               },
                               child: const Icon(

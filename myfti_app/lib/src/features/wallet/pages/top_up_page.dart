@@ -282,24 +282,35 @@ class _TopUpPageState extends State<TopUpPage> {
                           style: TextStyle(color: Colors.white70),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          balanceText,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 25,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (snapshot.hasError)
-                          TextButton(
-                            onPressed: () {
-                              setState(_loadWallet);
-                            },
-                            child: const Text(
-                              'Coba Lagi',
-                              style: TextStyle(color: Colors.white),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                balanceText,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: snapshot.hasError ? 22 : 25,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (snapshot.hasError)
+                              IconButton(
+                                onPressed: () {
+                                  setState(_loadWallet);
+                                },
+                                icon: const Icon(
+                                  Icons.refresh_rounded,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                                tooltip: 'Muat ulang saldo',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   );

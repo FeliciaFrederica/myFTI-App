@@ -450,21 +450,43 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(height: 8),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                balanceText,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                          Flexible(
+                            child: snapshot.hasError
+                                ? Text(
+                                    balanceText,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      balanceText,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
                           ),
+                          if (snapshot.hasError)
+                            IconButton(
+                              onPressed: _refreshData,
+                              icon: const Icon(
+                                Icons.refresh_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                              tooltip: 'Muat ulang saldo',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
                           if (snapshot.hasData)
                             IconButton(
                               onPressed: () {
@@ -484,16 +506,6 @@ class _HomePageState extends State<HomePage> {
                             ),
                         ],
                       ),
-                      if (snapshot.hasError)
-                        TextButton(
-                          onPressed: _refreshData,
-                          child: const Text(
-                            'Coba Lagi',
-                            style: TextStyle(
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
