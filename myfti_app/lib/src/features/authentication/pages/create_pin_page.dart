@@ -1,7 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../services/auth_service.dart';
 
 class CreatePinPage extends StatefulWidget {
@@ -12,31 +12,25 @@ class CreatePinPage extends StatefulWidget {
 }
 
 class _CreatePinPageState extends State<CreatePinPage> {
-  final _formKey = GlobalKey<FormState>();
-
   final _pinC = TextEditingController();
-  final _confirmPinC = TextEditingController();
-
   final _pinFocus = FocusNode();
-  final _confirmPinFocus = FocusNode();
 
   String? _setupToken;
+  String? _firstPin;
+  String? _errorMessage;
+
+  bool _isConfirming = false;
   bool _loading = false;
 
   @override
   void initState() {
     super.initState();
-
     _pinC.addListener(_onPinChanged);
-    _confirmPinC.addListener(_onPinChanged);
-
-    _pinFocus.addListener(_onPinChanged);
-    _confirmPinFocus.addListener(_onPinChanged);
   }
 
   void _onPinChanged() {
     if (mounted) {
-      setState(() {});
+      setState(() => _errorMessage = null);
     }
   }
 
@@ -54,31 +48,47 @@ class _CreatePinPageState extends State<CreatePinPage> {
   @override
   void dispose() {
     _pinC.removeListener(_onPinChanged);
-    _confirmPinC.removeListener(_onPinChanged);
-
-    _pinFocus.removeListener(_onPinChanged);
-    _confirmPinFocus.removeListener(_onPinChanged);
-
     _pinC.dispose();
-    _confirmPinC.dispose();
-
     _pinFocus.dispose();
-    _confirmPinFocus.dispose();
-
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+  void _continue() {
+    if (_pinC.text.length != 6) {
+      setState(() {
+        _errorMessage = 'PIN harus terdiri dari 6 angka';
+      });
+      return;
+    }
 
+    if (!_isConfirming) {
+      setState(() {
+        _firstPin = _pinC.text;
+        _isConfirming = true;
+        _errorMessage = null;
+        _pinC.clear();
+      });
+
+      return;
+    }
+
+    if (_pinC.text != _firstPin) {
+      setState(() {
+        _errorMessage = 'PIN tidak cocok. Silakan coba lagi.';
+        _pinC.clear();
+      });
+      return;
+    }
+
+    _submit();
+  }
+
+  Future<void> _submit() async {
     if (_setupToken == null || _setupToken!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Sesi pembuatan PIN tidak valid. Silakan registrasi ulang.',
-          ),
-        ),
-      );
+      setState(() {
+        _errorMessage =
+            'Sesi pembuatan PIN tidak valid. Silakan registrasi ulang.';
+      });
       return;
     }
 
@@ -87,10 +97,7 @@ class _CreatePinPageState extends State<CreatePinPage> {
     String? errorMessage;
 
     try {
-      await AuthService.setupPin(
-        pin: _pinC.text,
-        setupToken: _setupToken!,
-      );
+      await AuthService.setupPin(pin: _firstPin!, setupToken: _setupToken!);
     } catch (e) {
       errorMessage = e.toString().replaceFirst('Exception: ', '');
     }
@@ -100,102 +107,71 @@ class _CreatePinPageState extends State<CreatePinPage> {
     setState(() => _loading = false);
 
     if (errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      setState(() => _errorMessage = errorMessage);
       return;
     }
 
     final messenger = ScaffoldMessenger.of(context);
 
-    // Kembali ke halaman Login setelah PIN berhasil dibuat.
     Navigator.pop(context);
 
     messenger.showSnackBar(
-      const SnackBar(
-        content: Text('PIN berhasil dibuat. Silakan login.'),
-      ),
+      const SnackBar(content: Text('PIN berhasil dibuat. Silakan login.')),
     );
   }
 
-  Widget _buildPinField({
-    required String label,
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildPinInput() {
+    return Stack(
+      alignment: Alignment.center,
       children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-        const SizedBox(height: 16),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            IgnorePointer(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(6, (index) {
-                  final filled = index < controller.text.length;
-                  final active =
-                      focusNode.hasFocus &&
-                      index == controller.text.length;
+        IgnorePointer(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(6, (index) {
+              final filled = index < _pinC.text.length;
 
-                  return Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: filled
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.transparent,
-                      border: Border.all(
-                        color: active
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.grey,
-                        width: 1.5,
-                      ),
-                    ),
-                  );
-                }),
-              ),
+              return Container(
+                width: 36,
+                height: 44,
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                decoration: BoxDecoration(
+                  color: filled ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: filled ? AppColors.primary : Colors.grey.shade400,
+                    width: 1.5,
+                  ),
+                ),
+                child: filled
+                    ? const Center(
+                        child: Icon(Icons.circle, size: 9, color: AppColors.background),
+                      )
+                    : null,
+              );
+            }),
+          ),
+        ),
+
+        SizedBox(
+          height: 54,
+          child: TextField(
+            controller: _pinC,
+            focusNode: _pinFocus,
+            keyboardType: TextInputType.number,
+            obscureText: true,
+            maxLength: 6,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.transparent),
+            cursorColor: Colors.transparent,
+            decoration: const InputDecoration(
+              counterText: '',
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
             ),
-            TextFormField(
-              controller: controller,
-              focusNode: focusNode,
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              textAlign: TextAlign.center,
-              maxLength: 6,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
-              style: const TextStyle(
-                color: Colors.transparent,
-              ),
-              cursorColor: Colors.transparent,
-              decoration: const InputDecoration(
-                counterText: '',
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 18),
-              ),
-              validator: validator ??
-                  (value) {
-                    if (value == null || value.length != 6) {
-                      return 'PIN harus terdiri dari 6 angka';
-                    }
-                    return null;
-                  },
-            ),
-          ],
+          ),
         ),
       ],
     );
@@ -203,133 +179,112 @@ class _CreatePinPageState extends State<CreatePinPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_setupToken == null || _setupToken!.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Buat PIN'),
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Sesi pembuatan PIN tidak ditemukan. '
-                  'Silakan kembali ke halaman login.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/login',
-                      (route) => false,
-                    );
-                  },
-                  child: const Text('Kembali ke Login'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    final title = _isConfirming ? 'Konfirmasi PIN' : 'Buat PIN Transaksi';
+
+    final description = _isConfirming
+        ? 'Masukkan kembali PIN transaksi Anda'
+        : 'Masukkan 6 digit PIN untuk mengamankan transaksi Anda';
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Buat PIN Transaksi'),
-        centerTitle: true,
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (_isConfirming) {
+              setState(() {
+                _isConfirming = false;
+                _firstPin = null;
+                _pinC.clear();
+                _errorMessage = null;
+              });
+            } else {
+              Navigator.pop(context);
+            }
+          },
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(height: 48),
 
-                const Icon(
-                  Icons.lock_outline,
-                  size: 64,
+              Icon(
+                Icons.lock_outline_rounded,
+                size: 52,
+                color: AppColors.primary,
+              ),
+
+              const SizedBox(height: 28),
+
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.text,
                 ),
+              ),
 
-                const SizedBox(height: 24),
+              const SizedBox(height: 12),
 
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: AppColors.text),
+              ),
+
+              const SizedBox(height: 48),
+
+              _buildPinInput(),
+
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 16),
                 Text(
-                  'Buat PIN Transaksi',
+                  _errorMessage!,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: const TextStyle(color: AppColors.error, fontSize: 13),
                 ),
+              ],
 
-                const SizedBox(height: 8),
+              const SizedBox(height: 48),
 
-                Text(
-                  'Buat PIN 6 digit untuk mengamankan '
-                  'setiap transaksi Anda.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-
-                const SizedBox(height: 40),
-
-                _buildPinField(
-                  label: 'PIN Transaksi',
-                  controller: _pinC,
-                  focusNode: _pinFocus,
-                ),
-
-                const SizedBox(height: 32),
-
-                _buildPinField(
-                  label: 'Konfirmasi PIN',
-                  controller: _confirmPinC,
-                  focusNode: _confirmPinFocus,
-                  validator: (value) {
-                    if (value == null || value.length != 6) {
-                      return 'Konfirmasi PIN harus terdiri dari 6 angka';
-                    }
-
-                    if (value != _pinC.text) {
-                      return 'PIN tidak cocok';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 36),
-
-                ElevatedButton(
-                  onPressed: _loading ? null : _submit,
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _continue,
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                    ),
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                   child: _loading
                       ? const SizedBox(
-                          height: 20,
-                          width: 20,
+                          height: 22,
+                          width: 22,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
+                            color: Colors.white,
+                            strokeWidth: 2.5,
                           ),
                         )
-                      : const Text('Simpan PIN'),
+                      : Text(
+                          _isConfirming ? 'Simpan PIN' : 'Lanjut',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
