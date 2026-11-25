@@ -20,6 +20,9 @@ class _PaymentPageState extends State<PaymentPage> {
   static const Color backgroundColor = Color(0xFFF8F6FC);
   static const Color textColor = Color(0xFF2D1B46);
   static const Color borderColor = Color(0xFFD1C4E9);
+  static const Color cardColor = Color(0xFFEDE7F6);
+
+  static const int maxNotesLength = 150;
 
   static const Map<String, String> _categoryValues = {
     'Alleyway': 'ALLEYWAY',
@@ -36,6 +39,7 @@ class _PaymentPageState extends State<PaymentPage> {
   };
 
   final WalletService _walletService = WalletService();
+
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
@@ -57,10 +61,14 @@ class _PaymentPageState extends State<PaymentPage> {
   String? _merchantError;
   String? _subcategoryError;
   String? _amountError;
+  String? _notesError;
 
   bool _isLoading = true;
+  bool _isRefreshing = false;
   bool _isPaying = false;
-  String? _loadError;
+
+  String? _loadErrorTitle;
+  String? _loadErrorMessage;
 
   int get _amount => int.tryParse(_amountController.text) ?? 0;
 
@@ -89,6 +97,15 @@ class _PaymentPageState extends State<PaymentPage> {
     return _selectedSubcategory ?? _selectedCategory;
   }
 
+  // Pembayaran hanya bisa dilanjutkan jika data berhasil dimuat
+  bool get _canContinuePayment {
+    return _wallet != null &&
+        _loadErrorTitle == null &&
+        !_isRefreshing &&
+        !_isPaying &&
+        _notesController.text.length < maxNotesLength;
+  }
+
   String _formatRupiah(int amount) {
     final formatted = amount.toString().replaceAllMapped(
       RegExp(r'\B(?=(\d{3})+(?!\d))'),
@@ -101,7 +118,7 @@ class _PaymentPageState extends State<PaymentPage> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadData(showLoading: true);
   }
 
   @override
@@ -111,11 +128,81 @@ class _PaymentPageState extends State<PaymentPage> {
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _loadError = null;
-    });
+  // Memeriksa apakah error berasal dari koneksi
+  bool _isConnectionError(String message) {
+    const keywords = [
+      'failed host lookup',
+      'network is unreachable',
+      'no address associated',
+      'no internet',
+      'network request failed',
+      'failed to fetch',
+      'xmlhttprequest error',
+      'socketexception',
+      'clientexception',
+      'connection error',
+    ];
+
+    return keywords.any(message.contains);
+  }
+
+  // Memeriksa apakah server tidak merespons
+  bool _isServerError(String message) {
+    const keywords = [
+      'connection refused',
+      'connection reset',
+      'connection closed',
+      'handshakeexception',
+      'timed out',
+      'timeout',
+      'internal server error',
+      'bad gateway',
+      'service unavailable',
+      'gateway timeout',
+      'status code 500',
+      'status code 502',
+      'status code 503',
+      'status code 504',
+    ];
+
+    return keywords.any(message.contains);
+  }
+
+  // Menentukan pesan berdasarkan penyebab kegagalan API
+  void _setLoadError(Object error) {
+    final errorMessage = error.toString().toLowerCase();
+
+    if (_isServerError(errorMessage)) {
+      _loadErrorTitle = 'Layanan sedang bermasalah';
+      _loadErrorMessage =
+          'Server tidak merespons saat mengambil data pembayaran. '
+          'Silakan coba lagi beberapa saat.';
+    } else if (_isConnectionError(errorMessage)) {
+      _loadErrorTitle = 'Koneksi internet bermasalah';
+      _loadErrorMessage =
+          'Periksa koneksi internet Anda, lalu coba muat ulang.';
+    } else {
+      _loadErrorTitle = 'Data pembayaran belum tersedia';
+      _loadErrorMessage =
+          'Terjadi kendala saat mengambil data pembayaran. '
+          'Silakan coba lagi.';
+    }
+  }
+
+  // Memuat saldo dan daftar merchant
+  Future<void> _loadData({bool showLoading = false}) async {
+    if (showLoading) {
+      setState(() {
+        _isLoading = true;
+        _loadErrorTitle = null;
+        _loadErrorMessage = null;
+        _isRefreshing = false;
+      });
+    } else {
+      setState(() {
+        _isRefreshing = true;
+      });
+    }
 
     try {
       final wallet = await _walletService.getWallet();
@@ -126,14 +213,18 @@ class _PaymentPageState extends State<PaymentPage> {
       setState(() {
         _wallet = wallet;
         _recipients = recipients;
+        _loadErrorTitle = null;
+        _loadErrorMessage = null;
         _isLoading = false;
+        _isRefreshing = false;
       });
     } catch (error) {
       if (!mounted) return;
 
       setState(() {
-        _loadError = error.toString().replaceFirst('Exception: ', '');
+        _setLoadError(error);
         _isLoading = false;
+        _isRefreshing = false;
       });
     }
   }
@@ -149,20 +240,31 @@ class _PaymentPageState extends State<PaymentPage> {
     });
   }
 
+  // Memeriksa perubahan nominal pembayaran
   void _onAmountChanged(String value) {
+    final amount = int.tryParse(value) ?? 0;
+
     setState(() {
-      if (value.isEmpty) {
+      if (value.trim().isEmpty) {
         _amountError = null;
-      } else if (_amount <= 0) {
+      } else if (amount <= 0) {
         _amountError = 'Nominal harus lebih dari Rp 0.';
-      } else if (_amount > _balance) {
-        _amountError = 'Saldo kamu tidak mencukupi.';
       } else {
         _amountError = null;
       }
     });
   }
 
+  // Memeriksa panjang catatan pembayaran
+  void _onNotesChanged(String value) {
+    setState(() {
+      _notesError = value.length >= maxNotesLength
+          ? 'Catatan sudah mencapai batas maksimal 150 karakter.'
+          : null;
+    });
+  }
+
+  // Memeriksa seluruh input pembayaran
   bool _validateForm() {
     bool isValid = true;
 
@@ -171,18 +273,21 @@ class _PaymentPageState extends State<PaymentPage> {
       _merchantError = null;
       _subcategoryError = null;
       _amountError = null;
+      _notesError = null;
 
       if (_selectedCategory == null) {
         _categoryError = 'Pilih kategori pembayaran.';
         isValid = false;
       }
 
-      if (_selectedCategory != null && _selectedMerchantIdForCategory == null) {
+      if (_selectedCategory != null &&
+          _selectedMerchantIdForCategory == null) {
         _merchantError = 'Merchant untuk kategori ini belum tersedia.';
         isValid = false;
       }
 
-      if (_availableSubcategories.isNotEmpty && _selectedSubcategory == null) {
+      if (_availableSubcategories.isNotEmpty &&
+          _selectedSubcategory == null) {
         _subcategoryError = 'Pilih subkategori pembayaran.';
         isValid = false;
       }
@@ -190,8 +295,15 @@ class _PaymentPageState extends State<PaymentPage> {
       if (_amount <= 0) {
         _amountError = 'Masukkan nominal pembayaran.';
         isValid = false;
-      } else if (_amount > _balance) {
-        _amountError = 'Saldo kamu tidak mencukupi.';
+      }
+
+      if (_notesController.text.length >= maxNotesLength) {
+        _notesError =
+            'Catatan sudah mencapai batas maksimal 150 karakter.';
+        isValid = false;
+      }
+
+      if (_loadErrorTitle != null || _wallet == null) {
         isValid = false;
       }
     });
@@ -199,8 +311,19 @@ class _PaymentPageState extends State<PaymentPage> {
     return isValid;
   }
 
+  // Menampilkan konfirmasi pembayaran
   void _showConfirmation() {
+    if (!_canContinuePayment) return;
     if (!_validateForm()) return;
+
+    if (_amount > _balance) {
+      TopNotice.show(
+        context,
+        'Saldo kamu tidak mencukupi.',
+        success: false,
+      );
+      return;
+    }
 
     showDialog<void>(
       context: context,
@@ -228,10 +351,16 @@ class _PaymentPageState extends State<PaymentPage> {
               const SizedBox(height: 10),
               _confirmationRow('Nominal', _formatRupiah(_amount)),
               const SizedBox(height: 10),
-              _confirmationRow('Sisa saldo', _formatRupiah(_balance - _amount)),
+              _confirmationRow(
+                'Sisa saldo',
+                _formatRupiah(_balance - _amount),
+              ),
               if (_notesController.text.trim().isNotEmpty) ...[
                 const SizedBox(height: 10),
-                _confirmationRow('Catatan', _notesController.text.trim()),
+                _confirmationRow(
+                  'Catatan',
+                  _notesController.text.trim(),
+                ),
               ],
               const SizedBox(height: 16),
               const Text(
@@ -260,7 +389,10 @@ class _PaymentPageState extends State<PaymentPage> {
                 },
                 child: const Text(
                   'Konfirmasi',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -289,7 +421,10 @@ class _PaymentPageState extends State<PaymentPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Text(label, style: const TextStyle(color: Colors.grey)),
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.grey),
+          ),
         ),
         const SizedBox(width: 12),
         Flexible(
@@ -339,10 +474,14 @@ class _PaymentPageState extends State<PaymentPage> {
               backgroundColor: Colors.white,
               labelStyle: TextStyle(
                 color: isSelected ? primaryPurple : textColor,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: isSelected
+                    ? FontWeight.bold
+                    : FontWeight.normal,
                 fontSize: 13,
               ),
-              side: BorderSide(color: isSelected ? primaryPurple : borderColor),
+              side: BorderSide(
+                color: isSelected ? primaryPurple : borderColor,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -354,7 +493,10 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
+  // Memproses pembayaran dengan verifikasi PIN transaksi
   Future<void> _submitPayment() async {
+    if (!_canContinuePayment) return;
+
     final merchantId = _selectedMerchantIdForCategory;
 
     if (merchantId == null) {
@@ -363,6 +505,23 @@ class _PaymentPageState extends State<PaymentPage> {
         'Merchant untuk kategori ini belum tersedia.',
         success: false,
       );
+      return;
+    }
+
+    if (_amount > _balance) {
+      TopNotice.show(
+        context,
+        'Saldo kamu tidak mencukupi.',
+        success: false,
+      );
+      return;
+    }
+
+    if (_notesController.text.length >= maxNotesLength) {
+      setState(() {
+        _notesError =
+            'Catatan sudah mencapai batas maksimal 150 karakter.';
+      });
       return;
     }
 
@@ -388,7 +547,9 @@ class _PaymentPageState extends State<PaymentPage> {
       final updatedBalance = result['balance'];
 
       if (updatedBalance is num) {
-        _wallet = {...?_wallet, 'balance': updatedBalance};
+        setState(() {
+          _wallet = {...?_wallet, 'balance': updatedBalance};
+        });
       }
 
       LocalNotificationService.checkNow();
@@ -407,25 +568,28 @@ class _PaymentPageState extends State<PaymentPage> {
       final lowerError = errorMessage.toLowerCase();
 
       final message =
-          lowerError.contains('clientexception') ||
-              lowerError.contains('socketexception') ||
+          _isConnectionError(lowerError) ||
               lowerError.contains('connection refused')
           ? 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.'
           : errorMessage
-                .replaceFirst('Exception: ', '')
-                .replaceAll('Payment successful', 'Pembayaran berhasil')
-                .replaceAll('Insufficient balance', 'Saldo tidak mencukupi')
-                .replaceAll('Merchant not found', 'Merchant tidak ditemukan')
-                .replaceAll(
-                  'Invalid payment amount',
-                  'Nominal pembayaran tidak valid',
-                )
-                .replaceAll(
-                  'Pilih submerchant pembayaran yang valid.',
-                  'Pilih subkategori pembayaran yang valid.',
-                );
+              .replaceFirst('Exception: ', '')
+              .replaceAll('Payment successful', 'Pembayaran berhasil')
+              .replaceAll('Insufficient balance', 'Saldo tidak mencukupi')
+              .replaceAll('Merchant not found', 'Merchant tidak ditemukan')
+              .replaceAll(
+                'Invalid payment amount',
+                'Nominal pembayaran tidak valid',
+              )
+              .replaceAll(
+                'Pilih submerchant pembayaran yang valid.',
+                'Pilih subkategori pembayaran yang valid.',
+              );
 
-      TopNotice.show(context, message, success: false);
+      TopNotice.show(
+        context,
+        message,
+        success: false,
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -435,6 +599,7 @@ class _PaymentPageState extends State<PaymentPage> {
     }
   }
 
+  // Menampilkan pesan peringatan input
   Widget _buildWarning(String? message) {
     if (message == null) return const SizedBox.shrink();
 
@@ -447,7 +612,10 @@ class _PaymentPageState extends State<PaymentPage> {
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: Colors.red, fontSize: 12),
+              style: const TextStyle(
+                color: Colors.red,
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -466,6 +634,7 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
+  // Mengatur tampilan kolom input
   InputDecoration _inputDecoration({
     required String hint,
     String? errorText,
@@ -477,7 +646,10 @@ class _PaymentPageState extends State<PaymentPage> {
       prefixIcon: prefixIcon,
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 16,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: borderColor),
@@ -488,7 +660,10 @@ class _PaymentPageState extends State<PaymentPage> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: primaryPurple, width: 1.5),
+        borderSide: const BorderSide(
+          color: primaryPurple,
+          width: 1.5,
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -496,12 +671,18 @@ class _PaymentPageState extends State<PaymentPage> {
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        borderSide: const BorderSide(
+          color: Colors.red,
+          width: 1.5,
+        ),
       ),
     );
   }
 
+  // Kartu saldo tersedia
   Widget _buildBalanceCard() {
+    final hasError = _loadErrorTitle != null;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -512,15 +693,71 @@ class _PaymentPageState extends State<PaymentPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Saldo Saat Ini', style: TextStyle(color: Colors.white70)),
+          const Text(
+            'Saldo Saat Ini',
+            style: TextStyle(color: Colors.white70),
+          ),
           const SizedBox(height: 8),
-          Text(
-            _formatRupiah(_balance),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 25,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: hasError
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _loadErrorTitle!,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _isRefreshing
+                                ? 'Sedang mencoba memuat ulang...'
+                                : _loadErrorMessage!,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        _formatRupiah(_balance),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 25,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+              if (hasError)
+                IconButton(
+                  onPressed: _isRefreshing ? null : () => _loadData(),
+                  icon: _isRefreshing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.refresh_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                  tooltip: 'Muat ulang data',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+            ],
           ),
         ],
       ),
@@ -542,15 +779,21 @@ class _PaymentPageState extends State<PaymentPage> {
             return ChoiceChip(
               label: Text(category),
               selected: isSelected,
-              onSelected: _isPaying ? null : (_) => _selectCategory(category),
+              onSelected: _isPaying
+                  ? null
+                  : (_) => _selectCategory(category),
               selectedColor: const Color(0xFFEDE7F6),
               backgroundColor: Colors.white,
               labelStyle: TextStyle(
                 color: isSelected ? primaryPurple : textColor,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: isSelected
+                    ? FontWeight.bold
+                    : FontWeight.normal,
                 fontSize: 13,
               ),
-              side: BorderSide(color: isSelected ? primaryPurple : borderColor),
+              side: BorderSide(
+                color: isSelected ? primaryPurple : borderColor,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -563,6 +806,7 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
+  // Kolom nominal pembayaran
   Widget _buildAmountField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -573,47 +817,117 @@ class _PaymentPageState extends State<PaymentPage> {
           controller: _amountController,
           enabled: !_isPaying,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+          ],
           onChanged: _onAmountChanged,
-          decoration:
-              _inputDecoration(
-                hint: 'Masukkan nominal',
-                prefixIcon: const Padding(
-                  padding: EdgeInsets.only(left: 15, right: 8),
-                  child: Text(
-                    'Rp',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
-                  ),
-                ),
-                errorText: _amountError,
-              ).copyWith(
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: 45,
-                  minHeight: 0,
+          decoration: _inputDecoration(
+            hint: 'Masukkan nominal pembayaran',
+            prefixIcon: const Padding(
+              padding: EdgeInsets.only(left: 14, right: 8),
+              child: Text(
+                'Rp ',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
+            ),
+          ).copyWith(
+            prefixIconConstraints: const BoxConstraints(
+              minHeight: 0,
+              minWidth: 0,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: _amountError != null ? Colors.red : borderColor,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: _amountError != null ? Colors.red : borderColor,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: _amountError != null ? Colors.red : primaryPurple,
+                width: 1.5,
+              ),
+            ),
+          ),
         ),
+        if (_amountError != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            _amountError!,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ],
     );
   }
 
+  // Kolom catatan pembayaran
   Widget _buildNotesField() {
+    final hasNotesError = _notesError != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Catatan (Opsional)'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildSectionTitle('Catatan (Opsional)'),
+            Text(
+              '${_notesController.text.length}/$maxNotesLength',
+              style: TextStyle(
+                fontSize: 11,
+                color: hasNotesError ? Colors.red : Colors.grey,
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         TextField(
           controller: _notesController,
           enabled: !_isPaying,
           maxLines: 2,
-          maxLength: 150,
-          decoration: _inputDecoration(hint: 'Tambahkan catatan pembayaran')
-              .copyWith(counterStyle: const TextStyle(fontSize: 11)),
+          maxLength: maxNotesLength,
+          onChanged: _onNotesChanged,
+          decoration: _inputDecoration(
+            hint: 'Tambahkan catatan pembayaran',
+          ).copyWith(
+            counterText: '',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: hasNotesError ? Colors.red : borderColor,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: hasNotesError ? Colors.red : borderColor,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: hasNotesError ? Colors.red : primaryPurple,
+                width: 1.5,
+              ),
+            ),
+          ),
         ),
+        _buildWarning(_notesError),
       ],
     );
   }
@@ -625,7 +939,7 @@ class _PaymentPageState extends State<PaymentPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFEDE7F6),
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -633,7 +947,10 @@ class _PaymentPageState extends State<PaymentPage> {
         children: [
           const Text(
             'Ringkasan Pembayaran',
-            style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
           ),
           const SizedBox(height: 14),
           Row(
@@ -652,7 +969,10 @@ class _PaymentPageState extends State<PaymentPage> {
           const SizedBox(height: 10),
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [Text('Biaya Admin'), Text('Rp 0')],
+            children: [
+              Text('Biaya Admin'),
+              Text('Rp 0'),
+            ],
           ),
           const Divider(height: 24),
           Row(
@@ -663,7 +983,9 @@ class _PaymentPageState extends State<PaymentPage> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               Text(
-                _formatRupiah(remainingBalance < 0 ? 0 : remainingBalance),
+                _formatRupiah(
+                  remainingBalance < 0 ? 0 : remainingBalance,
+                ),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: textColor,
@@ -676,9 +998,10 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
+  // Form utama pembayaran
   Widget _buildPaymentForm() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -695,10 +1018,10 @@ class _PaymentPageState extends State<PaymentPage> {
 
           const SizedBox(height: 24),
           _buildAmountField(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           _buildNotesField(),
-          const SizedBox(height: 12),
+          const SizedBox(height: 24),
 
           _buildSummary(),
           const SizedBox(height: 24),
@@ -707,11 +1030,12 @@ class _PaymentPageState extends State<PaymentPage> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: _isPaying ? null : _showConfirmation,
+              onPressed: _canContinuePayment ? _showConfirmation : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryPurple,
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: Colors.grey.shade300,
+                elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -734,7 +1058,7 @@ class _PaymentPageState extends State<PaymentPage> {
                     ),
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -747,42 +1071,24 @@ class _PaymentPageState extends State<PaymentPage> {
       appBar: AppBar(
         title: const Text(
           'Pembayaran',
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: backgroundColor,
         elevation: 0,
         iconTheme: const IconThemeData(color: textColor),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _loadError != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: Colors.red,
-                      size: 42,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(_loadError!, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _loadData,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryPurple,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Coba Lagi'),
-                    ),
-                  ],
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: primaryPurple,
                 ),
-              ),
-            )
-          : _buildPaymentForm(),
+              )
+            : _buildPaymentForm(),
+      ),
     );
   }
 }
