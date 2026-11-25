@@ -6,6 +6,8 @@ class TransactionModel {
   final int amount;
   final String? description;
   final String? counterpartName;
+  final String? bankCode;
+  final String? accountNumber;
   final DateTime createdAt;
 
   const TransactionModel({
@@ -16,12 +18,14 @@ class TransactionModel {
     required this.amount,
     this.description,
     this.counterpartName,
+    this.bankCode,
+    this.accountNumber,
     required this.createdAt,
   });
 
-  // TOP_UP dan TRANSFER_IN menambah saldo.
+  // TOP_UP, TRANSFER_IN, dan PAYMENT_IN menambah saldo.
   bool get isIncoming =>
-      type == 'TOP_UP' || type == 'TRANSFER_IN';
+      type == 'TOP_UP' || type == 'TRANSFER_IN' || type == 'PAYMENT_IN';
 
   bool get isOutgoing => !isIncoming;
 
@@ -34,6 +38,8 @@ class TransactionModel {
       amount: (json['amount'] as num).toInt(),
       description: json['description'] as String?,
       counterpartName: json['counterpartName'] as String?,
+      bankCode: json['bankCode'] as String?,
+      accountNumber: json['accountNumber'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }

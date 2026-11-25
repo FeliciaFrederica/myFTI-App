@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
 import 'package:myfti_app/src/features/transaction/services/transaction_service.dart';
 import 'package:myfti_app/src/features/transaction/models/transaction_model.dart';
 
 import 'top_up_page.dart';
 import '../../payment/pages/payment_page.dart';
-import '../../notification/pages/notification_page.dart';
+import '../../notification/widgets/notification_bell_button.dart';
 import '../../summary/pages/financial_summary_page.dart';
 import '../../authentication/models/user_model.dart';
 import '../../authentication/services/auth_service.dart';
@@ -209,20 +209,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const NotificationPage(),
-                          ),
-                        );
-                      },
-                      icon: const Icon(
-                        Icons.notifications_none,
-                        color: primaryPurple,
-                      ),
-                    ),
+                    const NotificationBellButton(),
                     IconButton(
                       onPressed: _confirmLogout,
                       tooltip: 'Logout',
