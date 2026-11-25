@@ -45,13 +45,14 @@ const transfer = async (req, res) => {
       });
     }
 
-    const { recipientWalletId, amount, description } = req.body;
+    const { recipientWalletId, amount, description, pin } = req.body;
 
     const result = await transferService.transfer(
       userId,
       recipientWalletId,
       amount,
-      description
+      description,
+      pin
     );
 
     return res.status(200).json({

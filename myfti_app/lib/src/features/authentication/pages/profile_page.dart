@@ -6,6 +6,7 @@ import '../../../core/widgets/top_notice.dart';
 import '../services/auth_service.dart';
 import 'edit_profile_page.dart';
 import '../widgets/user_avatar.dart';
+import 'change_pin_page.dart';
 
 const Color _kCardColor = Color(0xFFF3EEFC);
 
@@ -73,12 +74,15 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // TODO: sambungkan ke halaman Ubah PIN Transaksi
-  void _openChangePin() {
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(builder: (_) => const ChangePinPage()),
-    // );
+  Future<void> _openChangePin() async {
+    final ok = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const ChangePinPage()),
+    );
+
+    if (ok == true && mounted) {
+      TopNotice.show(context, 'PIN transaksi berhasil diubah', success: true);
+    }
   }
 
   void _showAbout() {
@@ -216,7 +220,8 @@ class _ProfilePageState extends State<ProfilePage> {
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
             return const Center(
-                child: CircularProgressIndicator(color: AppColors.primary));
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
           }
           if (snap.hasError || !snap.hasData) {
             return Center(
@@ -224,13 +229,16 @@ class _ProfilePageState extends State<ProfilePage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                      snap.hasError
-                          ? _errorText(snap.error!)
-                          : 'Terjadi kesalahan',
-                      style: const TextStyle(color: AppColors.error)),
+                    snap.hasError
+                        ? _errorText(snap.error!)
+                        : 'Terjadi kesalahan',
+                    style: const TextStyle(color: AppColors.error),
+                  ),
                   const SizedBox(height: 12),
                   ElevatedButton(
-                      onPressed: _reload, child: const Text('Coba Lagi')),
+                    onPressed: _reload,
+                    child: const Text('Coba Lagi'),
+                  ),
                 ],
               ),
             );
@@ -255,11 +263,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       const SizedBox(height: 12),
                       Center(
-                        child: Text(user.name.toUpperCase(),
-                            style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.text)),
+                        child: Text(
+                          user.name.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.text,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 24),
 
@@ -270,7 +281,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         elevation: 0,
                         margin: EdgeInsets.zero,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         child: Column(
                           children: [
                             _info(Icons.badge_outlined, 'NIM', user.nim),
@@ -298,11 +310,15 @@ class _ProfilePageState extends State<ProfilePage> {
                         margin: EdgeInsets.zero,
                         clipBehavior: Clip.antiAlias,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         child: Column(
                           children: [
-                            _menu(Icons.edit_outlined, 'Edit Profil',
-                                () => _openEditPage(user)),
+                            _menu(
+                              Icons.edit_outlined,
+                              'Edit Profil',
+                              () => _openEditPage(user),
+                            ),
                             const Divider(height: 1),
                             _menu(Icons.pin_outlined, 'Ubah PIN Transaksi',
                                 _openChangePin),
@@ -319,7 +335,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         margin: EdgeInsets.zero,
                         clipBehavior: Clip.antiAlias,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         child: _menu(
                           Icons.info_outline,
                           'Tentang Aplikasi',
@@ -352,7 +369,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14)),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
                                 ),
                               ),
                             ),
@@ -371,16 +389,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _sectionTitle(String text) => Padding(
-        padding: const EdgeInsets.only(left: 4, bottom: 8),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.text,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(left: 4, bottom: 8),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: AppColors.text,
+      ),
+    ),
+  );
 
   Widget _info(IconData icon, String title, String value,
           {VoidCallback? onCopy}) =>
@@ -419,13 +437,16 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
       );
 
-  Widget _menu(IconData icon, String title, VoidCallback onTap,
-          {String? subtitle}) =>
-      ListTile(
-        leading: Icon(icon, color: AppColors.primary),
-        title: Text(title),
-        subtitle: subtitle == null ? null : Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
-      );
+  Widget _menu(
+    IconData icon,
+    String title,
+    VoidCallback onTap, {
+    String? subtitle,
+  }) => ListTile(
+    leading: Icon(icon, color: AppColors.primary),
+    title: Text(title),
+    subtitle: subtitle == null ? null : Text(subtitle),
+    trailing: const Icon(Icons.chevron_right),
+    onTap: onTap,
+  );
 }

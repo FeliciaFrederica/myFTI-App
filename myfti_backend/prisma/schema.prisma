@@ -40,6 +40,7 @@ model User {
   email             String   @unique
   nim               String?  @unique
   passwordHash      String
+  pinHash           String?
   avatarUrl         String?  @db.Text
   role              UserRole @default(STUDENT)
   merchantCategory  MerchantCategory?
@@ -69,6 +70,7 @@ model Transaction {
   status          TransactionStatus @default(SUCCESS)
   amount          Int
   description     String?
+  subcategory     String?
   userId          String
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   transferGroupId String?

@@ -38,7 +38,7 @@ const getWallet = async (req, res) => {
 const topUp = async (req, res) => {
   try {
     const userId = req.user?.id;
-    const { amount } = req.body;
+    const { amount, pin } = req.body;
 
     if (!userId) {
       return res.status(401).json({
@@ -54,7 +54,7 @@ const topUp = async (req, res) => {
       });
     }
 
-    const result = await walletService.topUp(userId, amount);
+    const result = await walletService.topUp(userId, amount, pin);
 
     if (!result) {
       return res.status(404).json({
@@ -71,9 +71,9 @@ const topUp = async (req, res) => {
   } catch (error) {
     console.error("Top up error:", error);
 
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       success: false,
-      message: "Gagal melakukan top up.",
+      message: error.message || "Gagal melakukan top up.",
     });
   }
 };

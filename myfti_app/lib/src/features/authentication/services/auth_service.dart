@@ -86,7 +86,7 @@ class AuthService {
 
   // Pada saat register akun baru, user tidak akan otomatis login.
   // Wallet ID dan saldo awal otomatis (Rp 0).
-  static Future<void> register({
+  static Future<String> register({
     required String name,
     required String nim,
     required String email,
@@ -105,9 +105,72 @@ class AuthService {
       ),
     );
 
-    final ok = res.statusCode == 200 || res.statusCode == 201;
-    if (!ok) {
-      throw Exception(_message(_decode(res), 'Registrasi gagal'));
+    final body = _decode(res);
+    final data = body['data'];
+
+    final setupToken = data is Map ? data['setupToken'] : null;
+
+    if ((res.statusCode != 200 && res.statusCode != 201) ||
+        setupToken == null ||
+        setupToken.toString().isEmpty) {
+      throw Exception(_message(body, 'Registrasi gagal'));
+    }
+
+    return setupToken.toString();
+  }
+
+  // Membuat PIN menggunakan token sementara dari proses registrasi.
+  static Future<void> setupPin({
+    required String pin,
+    required String setupToken,
+  }) async {
+    final res = await _guard(
+      ApiClient.post('/auth/pin/setup', body: {'pin': pin}, token: setupToken),
+    );
+
+    final body = _decode(res);
+
+    if (res.statusCode != 201) {
+      throw Exception(_message(body, 'Gagal membuat PIN'));
+    }
+  }
+
+  // Membuat PIN untuk user yang sudah login tetapi belum memiliki PIN.
+  static Future<void> createPin({required String pin}) async {
+    final res = await _guard(
+      _send('POST', '/auth/pin/create', body: {'pin': pin}, auth: true),
+    );
+
+    final body = _decode(res);
+
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      throw Exception(_message(body, 'Gagal membuat PIN'));
+    }
+  }
+
+  // Mengubah PIN transaksi dengan verifikasi PIN lama.
+  static Future<void> changePin({
+    required String currentPin,
+    required String newPin,
+  }) async {
+    final res = await _guard(
+      _send(
+        'PUT',
+        '/auth/pin/change',
+        body: {'currentPin': currentPin, 'newPin': newPin},
+        auth: true,
+      ),
+    );
+
+    final body = _decode(res);
+
+    if (res.statusCode == 401) {
+      await SessionService.clear();
+      throw Exception('Sesi berakhir, silakan login lagi');
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception(_message(body, 'Gagal mengubah PIN'));
     }
   }
 
@@ -235,10 +298,7 @@ class AuthService {
       _send(
         'PUT',
         '/auth/password',
-        body: {
-          'currentPassword': currentPassword,
-          'newPassword': newPassword,
-        },
+        body: {'currentPassword': currentPassword, 'newPassword': newPassword},
         auth: true,
       ),
     );

@@ -32,7 +32,7 @@ class _HomePageState extends State<HomePage> {
   final TransactionService _transactionService = TransactionService();
 
   late Future<Map<String, dynamic>> _walletFuture;
-  late Future<List<TransactionModel>> _transactionFuture;
+  late Future<TransactionPageResult> _transactionFuture;
   late Future<UserModel> _userFuture;
 
   bool _isBalanceVisible = false;
@@ -684,7 +684,7 @@ class _HomePageState extends State<HomePage> {
 
   // Transaksi Terakhir dari API
   Widget _buildRecentTransactions() {
-    return FutureBuilder<List<TransactionModel>>(
+    return FutureBuilder<TransactionPageResult>(
       future: _transactionFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -730,7 +730,7 @@ class _HomePageState extends State<HomePage> {
           );
         }
 
-        final transactions = snapshot.data ?? [];
+        final transactions = snapshot.data?.transactions ?? [];
 
         if (transactions.isEmpty) {
           return Container(

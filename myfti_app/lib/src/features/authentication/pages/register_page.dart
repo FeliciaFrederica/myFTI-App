@@ -35,11 +35,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _loading = true);
 
     String? errorMessage;
+    String? setupToken;
+
     try {
-      await AuthService.register(
+      setupToken = await AuthService.register(
         name: _nameC.text.trim(),
         nim: _nimC.text.trim(),
         email: _emailC.text.trim(),
@@ -50,16 +53,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (!mounted) return;
+
     setState(() => _loading = false);
 
-    final success = errorMessage == null;
+    if (errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content:
-          Text(success ? 'Registrasi berhasil, silakan login' : errorMessage),
-      backgroundColor: success ? AppColors.success : AppColors.error,
-    ));
-    if (success) Navigator.pop(context);
+    Navigator.pushReplacementNamed(
+      context,
+      '/create-pin',
+      arguments: setupToken,
+    );
   }
 
   Widget _eye(bool obscured, VoidCallback onTap) => IconButton(
