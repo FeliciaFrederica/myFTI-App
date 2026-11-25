@@ -85,7 +85,7 @@ class _TopNoticeViewState extends State<_TopNoticeView>
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.success ? AppColors.success : AppColors.error;
+    final color = widget.success ? const Color(0xFF673AB7) : AppColors.error;
     final icon =
         widget.success ? Icons.check_circle_outline : Icons.error_outline;
 

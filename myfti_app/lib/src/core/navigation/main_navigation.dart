@@ -81,13 +81,13 @@ class _MainNavigationState extends State<MainNavigation> {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 35, 16, 12),
+          padding: const EdgeInsets.only(top: 30),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final itemWidth = constraints.maxWidth / _icons.length;
 
               return SizedBox(
-                height: 72,
+                height: 85,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -95,7 +95,9 @@ class _MainNavigationState extends State<MainNavigation> {
                     Positioned.fill(
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(26),
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(24),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: primaryPurple.withValues(alpha: 0.10),
@@ -105,13 +107,17 @@ class _MainNavigationState extends State<MainNavigation> {
                           ],
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(26),
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(24),
+                          ),
                           child: BackdropFilter(
                             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                             child: Container(
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEDE7F6).withValues(alpha: 0.45),
-                                borderRadius: BorderRadius.circular(26),
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(24),
+                                ),
                                 border: Border.all(
                                   color: const Color(0xFFD1C4E9).withValues(alpha: 0.65),
                                   width: 1,
