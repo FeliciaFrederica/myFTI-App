@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
+import 'package:myfti_app/src/core/widgets/top_notice.dart';
 
 import '../../notification/services/local_notification_service.dart';
-import '../../transaction/pages/transaction_pin_page.dart';
+import '../../transaction/services/transaction_pin_flow.dart';
 import '../services/payment_service.dart';
 
 class PaymentPage extends StatefulWidget {
@@ -28,6 +29,12 @@ class _PaymentPageState extends State<PaymentPage> {
     'Akademik': 'AKADEMIK',
   };
 
+  static const Map<String, List<String>> _subcategoryOptions = {
+    'KANTIN': ['Warmindo', 'Kantin Teknik', 'Kantin Cuweg'],
+    'JUKEL_PO': ['Jukel DPM', 'PO BEM', 'PO DPM'],
+    'AKADEMIK': ['BPP', 'SPP'],
+  };
+
   final WalletService _walletService = WalletService();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
@@ -41,14 +48,14 @@ class _PaymentPageState extends State<PaymentPage> {
   ];
 
   Map<String, dynamic>? _wallet;
-
   List<Map<String, dynamic>> _recipients = [];
-  String? _selectedMerchantId;
 
   String? _selectedCategory;
+  String? _selectedSubcategory;
 
   String? _categoryError;
   String? _merchantError;
+  String? _subcategoryError;
   String? _amountError;
 
   bool _isLoading = true;
@@ -59,23 +66,27 @@ class _PaymentPageState extends State<PaymentPage> {
 
   int get _balance => (_wallet?['balance'] as num?)?.toInt() ?? 0;
 
-  List<Map<String, dynamic>> get _filteredMerchants {
-    final categoryValue = _categoryValues[_selectedCategory];
+  String? get _categoryValue => _categoryValues[_selectedCategory];
 
-    if (categoryValue == null) return [];
-
-    return _recipients
-        .where((merchant) => merchant['category'] == categoryValue)
-        .toList();
+  List<String> get _availableSubcategories {
+    if (_categoryValue == null) return [];
+    return _subcategoryOptions[_categoryValue] ?? [];
   }
 
-  String? get _selectedMerchantName {
+  String? get _selectedMerchantIdForCategory {
+    if (_categoryValue == null) return null;
+
     for (final merchant in _recipients) {
-      if (merchant['id'] == _selectedMerchantId) {
-        return merchant['name'] as String?;
+      if (merchant['category'] == _categoryValue) {
+        return merchant['id'] as String?;
       }
     }
+
     return null;
+  }
+
+  String? get _paymentDestination {
+    return _selectedSubcategory ?? _selectedCategory;
   }
 
   String _formatRupiah(int amount) {
@@ -130,9 +141,11 @@ class _PaymentPageState extends State<PaymentPage> {
   void _selectCategory(String category) {
     setState(() {
       _selectedCategory = category;
-      _selectedMerchantId = null;
+      _selectedSubcategory = null;
+
       _categoryError = null;
       _merchantError = null;
+      _subcategoryError = null;
     });
   }
 
@@ -156,6 +169,7 @@ class _PaymentPageState extends State<PaymentPage> {
     setState(() {
       _categoryError = null;
       _merchantError = null;
+      _subcategoryError = null;
       _amountError = null;
 
       if (_selectedCategory == null) {
@@ -163,11 +177,13 @@ class _PaymentPageState extends State<PaymentPage> {
         isValid = false;
       }
 
-      if (_selectedMerchantId == null ||
-          !_filteredMerchants.any(
-            (merchant) => merchant['id'] == _selectedMerchantId,
-          )) {
-        _merchantError = 'Pilih merchant tujuan.';
+      if (_selectedCategory != null && _selectedMerchantIdForCategory == null) {
+        _merchantError = 'Merchant untuk kategori ini belum tersedia.';
+        isValid = false;
+      }
+
+      if (_availableSubcategories.isNotEmpty && _selectedSubcategory == null) {
+        _subcategoryError = 'Pilih subkategori pembayaran.';
         isValid = false;
       }
 
@@ -190,14 +206,25 @@ class _PaymentPageState extends State<PaymentPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Konfirmasi Payment'),
+          backgroundColor: const Color(0xFFF3EEFC),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Konfirmasi Pembayaran',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _confirmationRow('Kategori', _selectedCategory!),
               const SizedBox(height: 10),
-              _confirmationRow('Merchant', _selectedMerchantName ?? '-'),
+              _confirmationRow('Tujuan', _paymentDestination ?? '-'),
               const SizedBox(height: 10),
               _confirmationRow('Nominal', _formatRupiah(_amount)),
               const SizedBox(height: 10),
@@ -207,24 +234,49 @@ class _PaymentPageState extends State<PaymentPage> {
                 _confirmationRow('Catatan', _notesController.text.trim()),
               ],
               const SizedBox(height: 16),
-              const Text('Pastikan detail pembayaran sudah benar.'),
+              const Text(
+                'Pastikan detail pembayaran sudah benar.',
+                style: TextStyle(fontSize: 14, height: 1.5),
+              ),
             ],
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryPurple,
-                foregroundColor: Colors.white,
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  _submitPayment();
+                },
+                child: const Text(
+                  'Konfirmasi',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
               ),
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _submitPayment();
-              },
-              child: const Text('Konfirmasi'),
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text(
+                  'Batal',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
           ],
         );
@@ -254,69 +306,80 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
-  Widget _buildMerchantSelector() {
-    final merchants = _filteredMerchants;
+  Widget _buildSubcategorySelector() {
+    final options = _availableSubcategories;
+
+    if (_selectedCategory == null || options.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Pilih Merchant'),
+        _buildSectionTitle('Pilih Subkategori'),
         const SizedBox(height: 12),
-        if (_selectedCategory == null)
-          const Text(
-            'Pilih kategori terlebih dahulu.',
-            style: TextStyle(color: Colors.grey),
-          )
-        else if (merchants.isEmpty)
-          const Text(
-            'Belum ada merchant untuk kategori ini.',
-            style: TextStyle(color: Colors.grey),
-          )
-        else
-          DropdownButtonFormField<String>(
-            initialValue: _selectedMerchantId,
-            isExpanded: true,
-            decoration: _inputDecoration(hint: 'Pilih merchant tujuan'),
-            items: merchants.map((merchant) {
-              return DropdownMenuItem<String>(
-                value: merchant['id'] as String,
-                child: Text(
-                  merchant['name'] as String,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              );
-            }).toList(),
-            onChanged: _isPaying
-                ? null
-                : (value) {
-                    setState(() {
-                      _selectedMerchantId = value;
-                      _merchantError = null;
-                    });
-                  },
-          ),
-        _buildWarning(_merchantError),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options.map((subcategory) {
+            final isSelected = _selectedSubcategory == subcategory;
+
+            return ChoiceChip(
+              label: Text(subcategory),
+              selected: isSelected,
+              onSelected: _isPaying
+                  ? null
+                  : (_) {
+                      setState(() {
+                        _selectedSubcategory = subcategory;
+                        _subcategoryError = null;
+                      });
+                    },
+              selectedColor: const Color(0xFFEDE7F6),
+              backgroundColor: Colors.white,
+              labelStyle: TextStyle(
+                color: isSelected ? primaryPurple : textColor,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 13,
+              ),
+              side: BorderSide(color: isSelected ? primaryPurple : borderColor),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            );
+          }).toList(),
+        ),
+        _buildWarning(_subcategoryError),
       ],
     );
   }
 
   Future<void> _submitPayment() async {
+    final merchantId = _selectedMerchantIdForCategory;
+
+    if (merchantId == null) {
+      TopNotice.show(
+        context,
+        'Merchant untuk kategori ini belum tersedia.',
+        success: false,
+      );
+      return;
+    }
+
     setState(() {
       _isPaying = true;
     });
 
     try {
-      final pin = await Navigator.push<String>(
-        context,
-        MaterialPageRoute(builder: (_) => const TransactionPinPage()),
-      );
+      final pin = await TransactionPinFlow.requestPin(context);
 
       if (!mounted || pin == null) return;
 
       final result = await PaymentService.createPayment(
-        merchantId: _selectedMerchantId!,
+        merchantId: merchantId,
         amount: _amount,
         description: _notesController.text.trim(),
+        subcategory: _selectedSubcategory,
         pin: pin,
       );
 
@@ -328,68 +391,41 @@ class _PaymentPageState extends State<PaymentPage> {
         _wallet = {...?_wallet, 'balance': updatedBalance};
       }
 
-      setState(() {
-        _isPaying = false;
-      });
-
       LocalNotificationService.checkNow();
 
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return AlertDialog(
-            icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
-            title: const Text('Payment Berhasil'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _formatRupiah(_amount),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: primaryPurple,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text('Kepada ${result['merchant']}'),
-                const SizedBox(height: 8),
-                Text('Sisa saldo: ${_formatRupiah(_balance)}'),
-                const SizedBox(height: 8),
-                Text(
-                  'Ref: ${result['reference']}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-            actions: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryPurple,
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Selesai'),
-              ),
-            ],
-          );
-        },
+      TopNotice.show(
+        context,
+        'Pembayaran ${_formatRupiah(_amount)} berhasil!',
+        success: true,
       );
-
-      if (!mounted) return;
 
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
-      );
+      final errorMessage = error.toString();
+      final lowerError = errorMessage.toLowerCase();
+
+      final message =
+          lowerError.contains('clientexception') ||
+              lowerError.contains('socketexception') ||
+              lowerError.contains('connection refused')
+          ? 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.'
+          : errorMessage
+                .replaceFirst('Exception: ', '')
+                .replaceAll('Payment successful', 'Pembayaran berhasil')
+                .replaceAll('Insufficient balance', 'Saldo tidak mencukupi')
+                .replaceAll('Merchant not found', 'Merchant tidak ditemukan')
+                .replaceAll(
+                  'Invalid payment amount',
+                  'Nominal pembayaran tidak valid',
+                )
+                .replaceAll(
+                  'Pilih submerchant pembayaran yang valid.',
+                  'Pilih subkategori pembayaran yang valid.',
+                );
+
+      TopNotice.show(context, message, success: false);
     } finally {
       if (mounted) {
         setState(() {
@@ -407,8 +443,7 @@ class _PaymentPageState extends State<PaymentPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 16),
-          const SizedBox(width: 6),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               message,
@@ -523,6 +558,7 @@ class _PaymentPageState extends State<PaymentPage> {
           }).toList(),
         ),
         _buildWarning(_categoryError),
+        _buildWarning(_merchantError),
       ],
     );
   }
@@ -596,7 +632,7 @@ class _PaymentPageState extends State<PaymentPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Ringkasan Payment',
+            'Ringkasan Pembayaran',
             style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
           ),
           const SizedBox(height: 14),
@@ -614,9 +650,9 @@ class _PaymentPageState extends State<PaymentPage> {
             ],
           ),
           const SizedBox(height: 10),
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [const Text('Biaya Admin'), const Text('Rp 0')],
+            children: [Text('Biaya Admin'), Text('Rp 0')],
           ),
           const Divider(height: 24),
           Row(
@@ -642,35 +678,22 @@ class _PaymentPageState extends State<PaymentPage> {
 
   Widget _buildPaymentForm() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Pembayaran',
-            style: TextStyle(
-              fontSize: 23,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Pilih kategori pembayaran, lalu masukkan '
-            'nominal dan keterangan pembayaran.',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
-
           _buildBalanceCard(),
           const SizedBox(height: 28),
 
           _buildCategorySelector(),
-          const SizedBox(height: 24),
 
-          _buildMerchantSelector(),
-          const SizedBox(height: 24),
+          if (_selectedCategory != null &&
+              _availableSubcategories.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            _buildSubcategorySelector(),
+          ],
 
+          const SizedBox(height: 24),
           _buildAmountField(),
           const SizedBox(height: 24),
 
@@ -703,7 +726,7 @@ class _PaymentPageState extends State<PaymentPage> {
                       ),
                     )
                   : const Text(
-                      'Continue',
+                      'Lanjutkan',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -711,7 +734,7 @@ class _PaymentPageState extends State<PaymentPage> {
                     ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 28),
         ],
       ),
     );
@@ -723,7 +746,7 @@ class _PaymentPageState extends State<PaymentPage> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text(
-          'Payment',
+          'Pembayaran',
           style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         backgroundColor: backgroundColor,

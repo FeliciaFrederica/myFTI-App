@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
 import 'package:myfti_app/src/core/widgets/top_notice.dart';
-import 'package:myfti_app/src/features/transaction/pages/transaction_pin_page.dart';
+
+import '../../transaction/services/transaction_pin_flow.dart';
 
 class TopUpPage extends StatefulWidget {
   const TopUpPage({super.key});
@@ -177,10 +178,7 @@ class _TopUpPageState extends State<TopUpPage> {
   }
 
   Future<void> _submitTopUp(int amount) async {
-    final pin = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(builder: (_) => const TransactionPinPage()),
-    );
+    final pin = await TransactionPinFlow.requestPin(context);
 
     if (!mounted || pin == null) return;
 

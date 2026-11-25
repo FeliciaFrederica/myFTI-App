@@ -12,10 +12,7 @@ enum SortOption { newest, oldest }
 class TransactionHistoryPage extends StatefulWidget {
   final bool showBackButton;
 
-  const TransactionHistoryPage({
-    super.key, 
-    this.showBackButton = false,
-  });
+  const TransactionHistoryPage({super.key, this.showBackButton = false});
 
   @override
   State<TransactionHistoryPage> createState() => _TransactionHistoryPageState();
@@ -211,6 +208,8 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       setState(() {
         _refreshErrorMessage = error.toString().replaceFirst('Exception: ', '');
       });
+    } finally {
+      _isFetching = false;
     }
   }
 
@@ -257,14 +256,14 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       'Feb',
       'Mar',
       'Apr',
-      'May',
+      'Mei',
       'Jun',
       'Jul',
-      'Aug',
+      'Agu',
       'Sep',
-      'Oct',
+      'Okt',
       'Nov',
-      'Dec',
+      'Des',
     ];
 
     return '${date.day} ${months[date.month - 1]} ${date.year}';
@@ -280,17 +279,30 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   String _getTitle(TransactionModel transaction) {
     switch (transaction.type) {
       case 'TOP_UP':
-        return 'Top Up';
+        return 'Isi Saldo';
       case 'TRANSFER_IN':
-        return 'Transfer Received';
+        return 'Transfer Masuk';
       case 'TRANSFER_OUT':
-        return 'Transfer';
+        return 'Transfer Keluar';
       case 'PAYMENT':
-        return 'Payment';
+        return 'Pembayaran';
       case 'WITHDRAW':
-        return 'Withdraw';
+        return 'Tarik Tunai';
       default:
-        return 'Transaction';
+        return 'Transaksi';
+    }
+  }
+
+  String _formatTransactionStatus(String status) {
+    switch (status.toUpperCase()) {
+      case 'SUCCESS':
+        return 'Berhasil';
+      case 'PENDING':
+        return 'Diproses';
+      case 'FAILED':
+        return 'Gagal';
+      default:
+        return status;
     }
   }
 
@@ -321,7 +333,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
             Icon(Icons.receipt_long_outlined, size: 55, color: Colors.grey),
             SizedBox(height: 12),
             Text(
-              'No transactions found',
+              'Tidak ada transaksi',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -330,7 +342,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
             ),
             SizedBox(height: 5),
             Text(
-              'Your transactions will appear here.',
+              'Transaksi Anda akan muncul di sini.',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
@@ -339,6 +351,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     }
 
     return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       itemCount: transactions.length + (_isLoadingMore ? 1 : 0),
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       controller: _scrollController,
@@ -376,9 +389,8 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => TransactionDetailPage(
-                transactionId: transaction.id,
-              ),
+              builder: (_) =>
+                  TransactionDetailPage(transactionId: transaction.id),
             ),
           );
         },
@@ -403,9 +415,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                   size: 23,
                 ),
               ),
-
               const SizedBox(width: 13),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,20 +428,16 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                         color: AppColors.text,
                       ),
                     ),
-
                     const SizedBox(height: 4),
-
                     Text(
                       transaction.counterpartName ??
                           transaction.description ??
-                          'myFTI Transaction',
+                          'Transaksi myFTI',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 11, color: Colors.grey),
                     ),
-
                     const SizedBox(height: 5),
-
                     Text(
                       '${_formatDate(transaction.createdAt)} • ${_formatTime(transaction.createdAt)}',
                       style: const TextStyle(fontSize: 10, color: Colors.grey),
@@ -439,9 +445,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                   ],
                 ),
               ),
-
               const SizedBox(width: 8),
-
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -453,11 +457,9 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                       color: transactionColor,
                     ),
                   ),
-
                   const SizedBox(height: 5),
-
                   Text(
-                    transaction.status,
+                    _formatTransactionStatus(transaction.status),
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w600,
@@ -483,13 +485,9 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           backgroundColor: AppColors.background,
           elevation: 0,
           automaticallyImplyLeading: widget.showBackButton,
-
-          iconTheme: const IconThemeData(
-            color: Colors.black,
-          ),
-
+          iconTheme: const IconThemeData(color: Colors.black),
           title: const Text(
-            'Transaction History',
+            'Riwayat Transaksi',
             style: TextStyle(
               color: AppColors.text,
               fontSize: 20,
@@ -502,20 +500,21 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                 Icons.filter_list_rounded,
                 color: AppColors.primary,
               ),
-              tooltip: 'Sort transactions',
+              tooltip: 'Urutkan transaksi',
               onSelected: (value) {
                 setState(() {
                   _sortOption = value;
                 });
+                _loadTransactions();
               },
               itemBuilder: (context) => [
                 const PopupMenuItem(
                   value: SortOption.newest,
-                  child: Text('Newest first'),
+                  child: Text('Terbaru'),
                 ),
                 const PopupMenuItem(
                   value: SortOption.oldest,
-                  child: Text('Oldest first'),
+                  child: Text('Terlama'),
                 ),
               ],
             ),
@@ -528,9 +527,9 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
             indicatorWeight: 3,
             labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             tabs: [
-              Tab(text: 'All'),
-              Tab(text: 'Incoming'),
-              Tab(text: 'Outgoing'),
+              Tab(text: 'Semua'),
+              Tab(text: 'Masuk'),
+              Tab(text: 'Keluar'),
             ],
           ),
         ),
@@ -553,7 +552,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadTransactions,
-                        child: const Text('Try Again'),
+                        child: const Text('Coba Lagi'),
                       ),
                     ],
                   ),
@@ -579,7 +578,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Unable to refresh transactions. Showing previous data.',
+                              'Gagal memperbarui transaksi. Menampilkan data sebelumnya.',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.orange.shade800,
