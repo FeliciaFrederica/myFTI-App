@@ -45,9 +45,11 @@ class _WithdrawPageState extends State<WithdrawPage> {
   bool _saveAccount = false;
 
   bool _isLoading = true;
+  bool _isRefreshingWallet = false;
   bool _isWithdrawing = false;
 
-  String? _loadError;
+  String? _loadErrorTitle;
+  String? _loadErrorMessage;
   String? _accountError;
   String? _amountError;
   String? _savedAccountError;
@@ -56,8 +58,16 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
   int get _balance => (_wallet?['balance'] as num?)?.toInt() ?? 0;
 
-  String get _selectedBankName =>
-      _banks[_selectedBankCode] ?? '-';
+  String get _selectedBankName => _banks[_selectedBankCode] ?? '-';
+
+  // Memeriksa apakah tombol lanjutkan dapat digunakan
+  bool get _canContinueWithdraw {
+    return _wallet != null &&
+        _loadErrorTitle == null &&
+        !_isLoading &&
+        !_isRefreshingWallet &&
+        !_isWithdrawing;
+  }
 
   String _formatRupiah(int amount) {
     final formatted = amount.toString().replaceAllMapped(
@@ -85,7 +95,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadData(showPageLoading: true);
   }
 
   @override
@@ -95,12 +105,81 @@ class _WithdrawPageState extends State<WithdrawPage> {
     super.dispose();
   }
 
+  // Memeriksa apakah error berasal dari koneksi
+  bool _isConnectionError(String message) {
+    const keywords = [
+      'failed host lookup',
+      'network is unreachable',
+      'no address associated',
+      'no internet',
+      'network request failed',
+      'failed to fetch',
+      'xmlhttprequest error',
+      'socketexception',
+      'clientexception',
+      'connection error',
+    ];
+
+    return keywords.any(message.contains);
+  }
+
+  // Memeriksa apakah server tidak merespons
+  bool _isServerError(String message) {
+    const keywords = [
+      'connection refused',
+      'connection reset',
+      'connection closed',
+      'handshakeexception',
+      'timed out',
+      'timeout',
+      'internal server error',
+      'bad gateway',
+      'service unavailable',
+      'gateway timeout',
+      'status code 500',
+      'status code 502',
+      'status code 503',
+      'status code 504',
+    ];
+
+    return keywords.any(message.contains);
+  }
+
+  // Menentukan pesan berdasarkan penyebab kegagalan API
+  void _setLoadError(Object error) {
+    final errorMessage = error.toString().toLowerCase();
+
+    if (_isServerError(errorMessage)) {
+      _loadErrorTitle = 'Layanan sedang bermasalah';
+      _loadErrorMessage =
+          'Server tidak merespons saat mengambil data. '
+          'Silakan coba lagi beberapa saat.';
+    } else if (_isConnectionError(errorMessage)) {
+      _loadErrorTitle = 'Koneksi internet bermasalah';
+      _loadErrorMessage =
+          'Periksa koneksi internet Anda, lalu coba muat ulang.';
+    } else {
+      _loadErrorTitle = 'Data belum tersedia';
+      _loadErrorMessage =
+          'Terjadi kendala saat mengambil data. '
+          'Silakan coba lagi.';
+    }
+  }
+
   // Mengambil data wallet dan rekening tersimpan
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _loadError = null;
-    });
+  Future<void> _loadData({bool showPageLoading = false}) async {
+    if (showPageLoading) {
+      setState(() {
+        _isLoading = true;
+        _loadErrorTitle = null;
+        _loadErrorMessage = null;
+        _isRefreshingWallet = false;
+      });
+    } else {
+      setState(() {
+        _isRefreshingWallet = true;
+      });
+    }
 
     try {
       final wallet = await _walletService.getWallet();
@@ -113,8 +192,15 @@ class _WithdrawPageState extends State<WithdrawPage> {
         _savedAccounts = accounts;
 
         if (accounts.isNotEmpty) {
-          _selectedBankAccountId ??=
-              accounts.first['id']?.toString();
+          if (_selectedBankAccountId == null ||
+              !accounts.any(
+                (account) =>
+                    account['id']?.toString() ==
+                    _selectedBankAccountId,
+              )) {
+            _selectedBankAccountId =
+                accounts.first['id']?.toString();
+          }
 
           _useSavedAccount = true;
         } else {
@@ -122,17 +208,18 @@ class _WithdrawPageState extends State<WithdrawPage> {
           _selectedBankAccountId = null;
         }
 
+        _loadErrorTitle = null;
+        _loadErrorMessage = null;
         _isLoading = false;
+        _isRefreshingWallet = false;
       });
     } catch (error) {
       if (!mounted) return;
 
       setState(() {
-        _loadError = error.toString().replaceFirst(
-          'Exception: ',
-          '',
-        );
+        _setLoadError(error);
         _isLoading = false;
+        _isRefreshingWallet = false;
       });
     }
   }
@@ -174,7 +261,6 @@ class _WithdrawPageState extends State<WithdrawPage> {
   void _selectAccountType(bool useSavedAccount) {
     setState(() {
       _useSavedAccount = useSavedAccount;
-
       _accountError = null;
       _savedAccountError = null;
     });
@@ -182,6 +268,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
   // Memvalidasi form withdraw
   bool _validateForm() {
+    if (!_canContinueWithdraw) return false;
+
     bool isValid = true;
 
     setState(() {
@@ -258,7 +346,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
   // Menampilkan konfirmasi withdraw
   Future<void> _showConfirmation() async {
-    if (!_validateForm()) return;
+    if (!_canContinueWithdraw || !_validateForm()) return;
 
     final destination = _getDestination();
 
@@ -389,6 +477,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
   // Memproses withdraw menggunakan PIN transaksi
   Future<void> _submitWithdraw() async {
+    if (!_canContinueWithdraw) return;
+
     setState(() {
       _isWithdrawing = true;
     });
@@ -517,6 +607,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
   // Kartu saldo tersedia
   Widget _buildBalanceCard() {
+    final hasError = _loadErrorTitle != null;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -532,13 +624,70 @@ class _WithdrawPageState extends State<WithdrawPage> {
             style: TextStyle(color: Colors.white70),
           ),
           const SizedBox(height: 8),
-          Text(
-            _formatRupiah(_balance),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 25,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: hasError
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _loadErrorTitle!,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _isRefreshingWallet
+                                ? 'Sedang mencoba memuat ulang...'
+                                : _loadErrorMessage!,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        _wallet != null
+                            ? _formatRupiah(_balance)
+                            : 'Memuat saldo...',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 25,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+              if (hasError)
+                IconButton(
+                  onPressed: _isRefreshingWallet
+                      ? null
+                      : () => _loadData(),
+                  icon: _isRefreshingWallet
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.refresh_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                  tooltip: 'Muat ulang data',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+            ],
           ),
         ],
       ),
@@ -639,6 +788,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
         const SizedBox(height: 12),
         TextField(
           controller: _accountNumberController,
+          enabled: !_isWithdrawing,
           keyboardType: TextInputType.number,
           maxLength: 16,
           inputFormatters: [
@@ -935,12 +1085,14 @@ class _WithdrawPageState extends State<WithdrawPage> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed:
-                  _isWithdrawing ? null : _showConfirmation,
+              onPressed: _canContinueWithdraw
+                  ? _showConfirmation
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryPurple,
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: Colors.grey.shade300,
+                disabledForegroundColor: Colors.grey.shade600,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -992,37 +1144,9 @@ class _WithdrawPageState extends State<WithdrawPage> {
                 color: primaryPurple,
               ),
             )
-          : _loadError != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          color: Colors.red,
-                          size: 42,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _loadError!,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _loadData,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryPurple,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Coba Lagi'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : _buildWithdrawForm(),
+          : SafeArea(
+              child: _buildWithdrawForm(),
+            ),
     );
   }
 }
