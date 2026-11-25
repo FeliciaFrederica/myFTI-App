@@ -9,6 +9,7 @@ const {
   loginSchema,
   updateProfileSchema,
   pinSetupSchema,
+  pinChangeSchema,
 } = require('../../validators/auth.validator');
 
 const authLimiter = rateLimit({
@@ -39,6 +40,23 @@ router.post(
   pinSetupAuth,
   ctrl.setupPin
 );
+
+router.post(
+  '/pin/create',
+  pinSetupLimiter,
+  auth,
+  validate(pinSetupSchema),
+  ctrl.createPinForAuthenticatedUser
+);
+
+router.put(
+  '/pin/change',
+  pinSetupLimiter,
+  auth,
+  validate(pinChangeSchema),
+  ctrl.changePin
+);
+
 router.post('/logout', auth, ctrl.logout);
 
 router.get('/profile', auth, ctrl.getProfile);

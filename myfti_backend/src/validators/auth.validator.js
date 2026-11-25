@@ -28,9 +28,15 @@ const pinSetupSchema = z.object({
   pin: z.string().regex(/^\d{6}$/, 'PIN harus terdiri dari 6 angka'),
 });
 
+const pinChangeSchema = z.object({
+  currentPin: z.string().regex(/^\d{6}$/, 'PIN lama harus terdiri dari 6 angka'),
+  newPin: z.string().regex(/^\d{6}$/, 'PIN baru harus terdiri dari 6 angka'),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
   updateProfileSchema,
-  pinSetupSchema
+  pinSetupSchema,
+  pinChangeSchema,
 };
