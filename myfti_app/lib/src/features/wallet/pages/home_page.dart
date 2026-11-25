@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'top_up_page.dart';
 import '../../payment/pages/payment_page.dart';
-import '../../notification/pages/notification_page.dart';
+import '../../notification/widgets/notification_bell_button.dart';
 import '../../summary/pages/financial_summary_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -22,7 +22,6 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Row(
                 children: [
                   const CircleAvatar(
@@ -49,26 +48,12 @@ class HomePage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const NotificationPage(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(
-                      Icons.notifications_none,
-                      color: primaryPurple,
-                    ),
-                  ),
+                  const NotificationBellButton(),
                 ],
               ),
 
               const SizedBox(height: 28),
 
-              // Balance Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
@@ -116,7 +101,6 @@ class HomePage extends StatelessWidget {
 
               const SizedBox(height: 28),
 
-              // Quick Actions
               const Text(
                 'Quick Actions',
                 style: TextStyle(
@@ -167,7 +151,6 @@ class HomePage extends StatelessWidget {
 
               const SizedBox(height: 28),
 
-              // Recent Transactions
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -217,7 +200,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // Shortcut menuju halaman rekap keuangan
   Widget _buildSummaryShortcut(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
@@ -275,7 +257,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // Quick Action Widget
   Widget _buildAction({
     required IconData icon,
     required String label,
@@ -304,7 +285,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // Transaction Item Widget
   Widget _buildTransaction({
     required IconData icon,
     required String title,

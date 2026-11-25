@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
 
+import '../../notification/services/local_notification_service.dart';
 import '../services/payment_service.dart';
 
 class PaymentPage extends StatefulWidget {
@@ -237,6 +238,8 @@ class _PaymentPageState extends State<PaymentPage> {
       setState(() {
         _isPaying = false;
       });
+
+      LocalNotificationService.checkNow();
 
       await showDialog<void>(
         context: context,
