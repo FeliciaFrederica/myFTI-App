@@ -23,31 +23,147 @@ class _TransferPageState extends State<TransferPage> {
   final TransferService _transferService = TransferService();
   final WalletService _walletService = WalletService();
 
-  final TextEditingController _walletIdController = TextEditingController();
-  final TextEditingController _amountController = TextEditingController();
+  // Controller untuk input transfer
+  final TextEditingController _walletIdController =
+      TextEditingController();
+  final TextEditingController _amountController =
+      TextEditingController();
   final TextEditingController _descriptionController =
       TextEditingController();
 
-  late Future<Map<String, dynamic>> _walletFuture;
-
+  // Data saldo dan penerima
+  Map<String, dynamic>? _wallet;
   Map<String, dynamic>? _recipient;
 
+  // Status proses halaman
+  bool _isWalletLoading = true;
+  bool _isRefreshingWallet = false;
   bool _isSearching = false;
   bool _isTransferring = false;
 
+  // Pesan error pengambilan saldo
+  String? _loadErrorTitle;
+  String? _loadErrorMessage;
+
+  // Pesan validasi input
   String? _walletIdError;
   String? _amountError;
 
   int get _amount => int.tryParse(_amountController.text) ?? 0;
 
+  int get _balance => (_wallet?['balance'] as num?)?.toInt() ?? 0;
+
+  // Transfer hanya bisa dilanjutkan setelah saldo berhasil dimuat
+  bool get _canContinueTransfer {
+    return _wallet != null &&
+        _loadErrorTitle == null &&
+        !_isRefreshingWallet &&
+        !_isTransferring;
+  }
+
   @override
   void initState() {
     super.initState();
-    _loadWallet();
+    _loadWallet(showLoading: true);
   }
 
-  void _loadWallet() {
-    _walletFuture = _walletService.getWallet();
+  // Memeriksa apakah error berasal dari koneksi
+  bool _isConnectionError(String message) {
+    const keywords = [
+      'failed host lookup',
+      'network is unreachable',
+      'no address associated',
+      'no internet',
+      'network request failed',
+      'failed to fetch',
+      'xmlhttprequest error',
+      'socketexception',
+      'clientexception',
+      'connection error',
+    ];
+
+    return keywords.any(message.contains);
+  }
+
+  // Memeriksa apakah server tidak merespons
+  bool _isServerError(String message) {
+    const keywords = [
+      'connection refused',
+      'connection reset',
+      'connection closed',
+      'handshakeexception',
+      'timed out',
+      'timeout',
+      'internal server error',
+      'bad gateway',
+      'service unavailable',
+      'gateway timeout',
+      'status code 500',
+      'status code 502',
+      'status code 503',
+      'status code 504',
+    ];
+
+    return keywords.any(message.contains);
+  }
+
+  // Menentukan pesan berdasarkan penyebab kegagalan API
+  void _setWalletLoadError(Object error) {
+    final errorMessage = error.toString().toLowerCase();
+
+    if (_isServerError(errorMessage)) {
+      _loadErrorTitle = 'Layanan sedang bermasalah';
+      _loadErrorMessage =
+          'Server tidak merespons saat mengambil saldo. '
+          'Silakan coba lagi beberapa saat.';
+    } else if (_isConnectionError(errorMessage)) {
+      _loadErrorTitle = 'Koneksi internet bermasalah';
+      _loadErrorMessage =
+          'Periksa koneksi internet Anda, lalu coba muat ulang.';
+    } else {
+      _loadErrorTitle = 'Saldo belum tersedia';
+      _loadErrorMessage =
+          'Terjadi kendala saat mengambil data saldo. '
+          'Silakan coba lagi.';
+    }
+  }
+
+  // Memuat saldo wallet
+  Future<void> _loadWallet({bool showLoading = false}) async {
+    if (showLoading) {
+      setState(() {
+        _isWalletLoading = true;
+        _loadErrorTitle = null;
+        _loadErrorMessage = null;
+        _isRefreshingWallet = false;
+      });
+    } else {
+      setState(() {
+        _isRefreshingWallet = true;
+      });
+    }
+
+    try {
+      final wallet = await _walletService.getWallet();
+
+      if (!mounted) return;
+
+      setState(() {
+        _wallet = wallet;
+        _loadErrorTitle = null;
+        _loadErrorMessage = null;
+        _isWalletLoading = false;
+        _isRefreshingWallet = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _setWalletLoadError(error);
+        _isWalletLoading = false;
+        _isRefreshingWallet = false;
+      });
+    }
   }
 
   @override
@@ -58,6 +174,7 @@ class _TransferPageState extends State<TransferPage> {
     super.dispose();
   }
 
+  // Mengubah nominal menjadi format Rupiah
   String _formatRupiah(int amount) {
     final formatted = amount.toString().replaceAllMapped(
       RegExp(r'\B(?=(\d{3})+(?!\d))'),
@@ -125,7 +242,10 @@ class _TransferPageState extends State<TransferPage> {
       if (!mounted) return;
 
       setState(() {
-        _walletIdError = error.toString().replaceFirst('Exception: ', '');
+        _walletIdError = error.toString().replaceFirst(
+          'Exception: ',
+          '',
+        );
       });
     } finally {
       if (mounted) {
@@ -138,6 +258,8 @@ class _TransferPageState extends State<TransferPage> {
 
   // Memeriksa nominal dan menampilkan konfirmasi transfer
   Future<void> _showConfirmation() async {
+    if (!_canContinueTransfer) return;
+
     if (_recipient == null) {
       setState(() {
         _walletIdError = _walletIdController.text.trim().isEmpty
@@ -187,7 +309,7 @@ class _TransferPageState extends State<TransferPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Kamu akan mengirim saldo kepada:',
+                'Anda akan mengirim saldo kepada:',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.black87,
@@ -267,6 +389,8 @@ class _TransferPageState extends State<TransferPage> {
 
   // Memproses transfer dengan verifikasi PIN transaksi
   Future<void> _submitTransfer() async {
+    if (!_canContinueTransfer || _recipient == null) return;
+
     setState(() {
       _isTransferring = true;
     });
@@ -356,10 +480,445 @@ class _TransferPageState extends State<TransferPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  // Kartu saldo tersedia
+  Widget _buildBalanceCard() {
+    final hasError = _loadErrorTitle != null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: primaryPurple,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Saldo Tersedia',
+            style: TextStyle(color: Colors.white70),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: hasError
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _loadErrorTitle!,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _isRefreshingWallet
+                                ? 'Sedang mencoba memuat ulang...'
+                                : _loadErrorMessage!,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        _formatRupiah(_balance),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 25,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+              if (hasError)
+                IconButton(
+                  onPressed: _isRefreshingWallet
+                      ? null
+                      : () => _loadWallet(),
+                  icon: _isRefreshingWallet
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.refresh_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                  tooltip: 'Muat ulang saldo',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Form utama transfer
+  Widget _buildTransferForm() {
     final displayedAmount = _amount;
 
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Saldo tersedia
+          _buildBalanceCard(),
+
+          const SizedBox(height: 28),
+
+          const Text(
+            'Informasi Penerima',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Kolom ID Dompet dan tombol pencarian
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _walletIdController,
+                      enabled: !_isTransferring,
+                      textCapitalization: TextCapitalization.characters,
+                      onChanged: _onWalletIdChanged,
+                      decoration: _inputDecoration(
+                        hintText: 'Masukkan ID Penerima',
+                        prefixIcon: const Icon(
+                          Icons.person_outline,
+                          color: primaryPurple,
+                        ),
+                      ).copyWith(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: _walletIdError != null
+                                ? Colors.red
+                                : borderColor,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: _walletIdError != null
+                                ? Colors.red
+                                : borderColor,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: _walletIdError != null
+                                ? Colors.red
+                                : primaryPurple,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (_walletIdError != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        _walletIdError!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: SizedBox(
+                  width: 46,
+                  height: 46,
+                  child: OutlinedButton(
+                    onPressed: _isSearching || _isTransferring
+                        ? null
+                        : _searchRecipient,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryPurple,
+                      padding: EdgeInsets.zero,
+                      side: const BorderSide(color: primaryPurple),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: _isSearching
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: primaryPurple,
+                            ),
+                          )
+                        : const Icon(Icons.search, size: 25),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          if (_recipient != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: Icon(
+                      Icons.person,
+                      color: primaryPurple,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _recipient!['fullName']?.toString() ?? '-',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'ID Dompet: ${_recipient!['walletId'] ?? '-'}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 28),
+
+          const Text(
+            'Nominal Transfer',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          TextField(
+            controller: _amountController,
+            enabled: !_isTransferring,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            onChanged: _onAmountChanged,
+            decoration: _inputDecoration(
+              hintText: 'Masukkan nominal transfer',
+            ).copyWith(
+              prefixIcon: const Padding(
+                padding: EdgeInsets.only(left: 14, right: 8),
+                child: Text(
+                  'Rp ',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minHeight: 0,
+                minWidth: 0,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: _amountError != null
+                      ? Colors.red
+                      : borderColor,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: _amountError != null
+                      ? Colors.red
+                      : borderColor,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: _amountError != null
+                      ? Colors.red
+                      : primaryPurple,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+
+          if (_amountError != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              _amountError!,
+              style: const TextStyle(
+                color: Colors.red,
+                fontSize: 12,
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 20),
+
+          const Text(
+            'Deskripsi (Opsional)',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Kolom deskripsi
+          TextField(
+            controller: _descriptionController,
+            enabled: !_isTransferring,
+            maxLength: 100,
+            maxLines: 3,
+            decoration: _inputDecoration(
+              hintText: 'Tambahkan catatan transfer',
+            ).copyWith(
+              alignLabelWithHint: true,
+              counterText: '',
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Ringkasan transfer
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ringkasan Transfer',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Nominal Transfer'),
+                    Text(
+                      _formatRupiah(displayedAmount),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: primaryPurple,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Tombol konfirmasi
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _canContinueTransfer
+                  ? _showConfirmation
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryPurple,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey.shade300,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: _isTransferring
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Lanjutkan',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
@@ -375,407 +934,13 @@ class _TransferPageState extends State<TransferPage> {
         iconTheme: const IconThemeData(color: textColor),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Saldo tersedia
-              FutureBuilder<Map<String, dynamic>>(
-                future: _walletFuture,
-                builder: (context, snapshot) {
-                  String balanceText = 'Memuat saldo...';
-
-                  if (snapshot.hasData) {
-                    final balance =
-                        (snapshot.data!['balance'] as num).toInt();
-
-                    balanceText = _formatRupiah(balance);
-                  } else if (snapshot.hasError) {
-                    balanceText = 'Gagal memuat saldo';
-                  }
-
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: primaryPurple,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Saldo Tersedia',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                balanceText,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: snapshot.hasError ? 22 : 25,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            if (snapshot.hasError)
-                              IconButton(
-                                onPressed: () {
-                                  setState(_loadWallet);
-                                },
-                                icon: const Icon(
-                                  Icons.refresh_rounded,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                                tooltip: 'Muat ulang saldo',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 28),
-
-              const Text(
-                'Informasi Penerima',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
+        child: _isWalletLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: primaryPurple,
                 ),
-              ),
-              const SizedBox(height: 12),
-
-              // Kolom ID Dompet dan tombol pencarian
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextField(
-                          controller: _walletIdController,
-                          textCapitalization:
-                              TextCapitalization.characters,
-                          onChanged: _onWalletIdChanged,
-                          decoration: _inputDecoration(
-                            hintText: 'Masukkan ID Penerima',
-                            prefixIcon: const Icon(
-                              Icons.person_outline,
-                              color: primaryPurple,
-                            ),
-                          ).copyWith(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(
-                                color: _walletIdError != null
-                                    ? Colors.red
-                                    : borderColor,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(
-                                color: _walletIdError != null
-                                    ? Colors.red
-                                    : borderColor,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(
-                                color: _walletIdError != null
-                                    ? Colors.red
-                                    : primaryPurple,
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (_walletIdError != null) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            _walletIdError!,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: SizedBox(
-                      width: 46,
-                      height: 46,
-                      child: OutlinedButton(
-                        onPressed:
-                            _isSearching ? null : _searchRecipient,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: primaryPurple,
-                          padding: EdgeInsets.zero,
-                          side: const BorderSide(color: primaryPurple),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: _isSearching
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: primaryPurple,
-                                ),
-                              )
-                            : const Icon(Icons.search, size: 25),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              if (_recipient != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(
-                        backgroundColor: Colors.white,
-                        child: Icon(
-                          Icons.person,
-                          color: primaryPurple,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _recipient!['fullName']?.toString() ?? '-',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: textColor,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'ID Dompet: ${_recipient!['walletId'] ?? '-'}',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 28),
-
-              const Text(
-                'Nominal Transfer',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              TextField(
-                controller: _amountController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                ],
-                onChanged: _onAmountChanged,
-                decoration: _inputDecoration(
-                  hintText: 'Masukkan nominal transfer',
-                ).copyWith(
-                  prefixIcon: const Padding(
-                    padding: EdgeInsets.only(left: 14, right: 8),
-                    child: Text(
-                      'Rp ',
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  prefixIconConstraints: const BoxConstraints(
-                    minHeight: 0,
-                    minWidth: 0,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: _amountError != null
-                          ? Colors.red
-                          : borderColor,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: _amountError != null
-                          ? Colors.red
-                          : borderColor,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: _amountError != null
-                          ? Colors.red
-                          : primaryPurple,
-                      width: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-
-              if (_amountError != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  _amountError!,
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 20),
-
-              const Text(
-                'Deskripsi (Opsional)',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Kolom deskripsi
-              TextField(
-                controller: _descriptionController,
-                maxLength: 100,
-                maxLines: 3,
-                decoration: _inputDecoration(
-                  hintText: 'Tambahkan catatan transfer',
-                ).copyWith(
-                  alignLabelWithHint: true,
-                  counterText: '',
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Ringkasan transfer
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Ringkasan Transfer',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Nominal Transfer'),
-                        Text(
-                          _formatRupiah(displayedAmount),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: primaryPurple,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Tombol konfirmasi
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed:
-                      _isTransferring ? null : _showConfirmation,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryPurple,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: _isTransferring
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          'Lanjutkan',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
+              )
+            : _buildTransferForm(),
       ),
     );
   }
