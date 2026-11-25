@@ -1,6 +1,7 @@
 const prisma = require("../../config/prisma");
 const crypto = require("crypto");
 const { notify, formatRupiah } = require("../../utils/notify");
+const verifyTransactionPin = require("../../utils/verify-transaction-pin");
 
 const MIN_WITHDRAW = 10000;
 
@@ -70,6 +71,7 @@ const withdraw = async (
     accountNumber,
     amount,
     saveAccount = false,
+    pin,
   }
 ) => {
   if (!userId) {
@@ -130,6 +132,8 @@ const withdraw = async (
   }
 
   return await runWithdrawTransaction(async (tx) => {
+    await verifyTransactionPin(tx, userId, pin);
+
     // Memeriksa wallet pengguna
     const wallet = await tx.wallet.findUnique({
       where: {

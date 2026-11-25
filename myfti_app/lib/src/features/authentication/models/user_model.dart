@@ -7,6 +7,7 @@ class UserModel {
   final num balance;
   final String role;
   final String? avatar;
+  final bool hasPin;
 
   UserModel({
     required this.id,
@@ -17,6 +18,7 @@ class UserModel {
     required this.balance,
     required this.role,
     this.avatar,
+    this.hasPin = false
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class UserModel {
       avatar: (avatar == null || avatar.toString().isEmpty)
           ? null
           : avatar.toString(),
+      hasPin: json['hasPin'] == true,
     );
   }
 
@@ -56,6 +59,7 @@ class UserModel {
     'balance': balance,
     'role': role,
     'avatar': avatar,
+    'hasPin': hasPin,
   };
 
   // Inisial untuk CircleAvatar, contoh "Budi Santoso" -> "BS"

@@ -11,6 +11,17 @@ const signToken = (user) =>
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 
+const signPinSetupToken = (user) =>
+  jwt.sign(
+    {
+      sub: user.id,
+      tv: user.tokenVersion,
+      purpose: 'PIN_SETUP',
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '10m' }
+  );
+
 const sanitizeUser = (user) => ({
   id: user.id,
   fullName: user.fullName,
@@ -18,6 +29,7 @@ const sanitizeUser = (user) => ({
   nim: user.nim,
   role: user.role,
   avatarUrl: user.avatarUrl || null,
+  hasPin: Boolean(user.pinHash),
   wallet: user.wallet
     ? {
       walletId: user.wallet.walletId,
@@ -69,7 +81,10 @@ async function register({ fullName, nim, email, password }) {
         return { ...created, wallet };
       });
 
-      return { token: signToken(user), user: sanitizeUser(user) };
+      return {
+        setupToken: signPinSetupToken(user),
+        user: sanitizeUser(user),
+      };
     } catch (err) {
       if (err.code === 'P2002') {
         const dup = await prisma.user.findFirst({
@@ -178,12 +193,79 @@ async function changePassword(userId, currentPassword, newPassword) {
   });
 }
 
+async function createPin(userId, pin) {
+  const pinHash = await bcrypt.hash(pin, 12);
+
+  const result = await prisma.user.updateMany({
+    where: {
+      id: userId,
+      pinHash: null,
+    },
+    data: {
+      pinHash,
+    },
+  });
+
+  if (result.count === 0) {
+    throw new AppError('PIN sudah pernah dibuat', 409);
+  }
+}
+
+async function changePin(userId, currentPin, newPin) {
+  if (!/^\d{6}$/.test(currentPin) || !/^\d{6}$/.test(newPin)) {
+    throw new AppError('PIN harus terdiri dari 6 angka', 400);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      pinHash: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError('User tidak ditemukan', 404);
+  }
+
+  if (!user.pinHash) {
+    throw new AppError('Anda belum memiliki PIN transaksi', 409);
+  }
+
+  const isMatch = await bcrypt.compare(currentPin, user.pinHash);
+
+  if (!isMatch) {
+    throw new AppError('PIN lama salah', 400);
+  }
+
+  if (currentPin === newPin) {
+    throw new AppError('PIN baru tidak boleh sama dengan PIN lama', 400);
+  }
+
+  const newPinHash = await bcrypt.hash(newPin, 12);
+
+  const result = await prisma.user.updateMany({
+    where: {
+      id: userId,
+      pinHash: user.pinHash,
+    },
+    data: {
+      pinHash: newPinHash,
+    },
+  });
+
+  if (result.count === 0) {
+    throw new AppError('PIN telah berubah. Silakan coba kembali.', 409);
+  }
+}
+
 module.exports = {
   register,
   login,
+  createPin,
   logout,
   getProfile,
   updateProfile,
   updateAvatar,
   changePassword,
+  changePin,
 };

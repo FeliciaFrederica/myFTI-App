@@ -4,10 +4,13 @@ import 'src/core/navigation/main_navigation.dart';
 import 'src/features/authentication/pages/login_page.dart';
 import 'src/features/authentication/pages/register_page.dart';
 import 'src/features/authentication/pages/splash_page.dart';
+import 'src/features/authentication/pages/create_pin_page.dart';
 import 'src/features/merchant/pages/merchant_home_page.dart';
+import 'src/features/notification/services/local_notification_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await LocalNotificationService.init();
   runApp(const MyApp());
 }
 
@@ -58,6 +61,7 @@ class MyApp extends StatelessWidget {
         '/': (_) => SplashScreen(),
         '/login': (_) => LoginScreen(),
         '/register': (_) => RegisterScreen(),
+        '/create-pin': (_) => const CreatePinPage(),
         '/home': (_) => const MainNavigation(),
         '/merchant': (_) => const MerchantHomePage(),
       },

@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myfti_app/src/features/authentication/models/user_model.dart';
 
@@ -30,6 +31,18 @@ class SessionService {
   }
 
   static Future<bool> isLoggedIn() async => (await getToken()) != null;
+
+  static Future<void> markHasPin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_userKey);
+
+    if (raw == null) return;
+
+    final userData = jsonDecode(raw) as Map<String, dynamic>;
+    userData['hasPin'] = true;
+
+    await prefs.setString(_userKey, jsonEncode(userData));
+  }
 
   static Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();

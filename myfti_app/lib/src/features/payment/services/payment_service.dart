@@ -34,9 +34,11 @@ class PaymentService {
   }
 
   static Future<Map<String, dynamic>> createPayment({
-    required String category,
+    required String merchantId,
     required int amount,
+    required String pin,
     String? description,
+    String? subcategory,
   }) async {
     final token = await SessionService.getToken();
 
@@ -48,9 +50,11 @@ class PaymentService {
       '/payments',
       token: token,
       body: {
-        'category': category,
+        'merchantId': merchantId,
         'amount': amount,
         'description': description ?? '',
+        'subcategory': subcategory,
+        'pin': pin,
       },
     );
 
@@ -64,7 +68,13 @@ class PaymentService {
     if (response.statusCode < 200 ||
         response.statusCode >= 300 ||
         responseData['success'] != true) {
-      throw Exception(responseData['message'] ?? 'Payment gagal diproses.');
+      final message = responseData['message']?.toString();
+
+      throw Exception(
+        message == null || message.isEmpty
+            ? 'Pembayaran gagal diproses. Silakan coba lagi.'
+            : message,
+      );
     }
 
     return Map<String, dynamic>.from(responseData['data']);

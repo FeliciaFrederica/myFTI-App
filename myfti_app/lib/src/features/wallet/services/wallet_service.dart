@@ -50,13 +50,16 @@ class WalletService {
     );
   }
 
-  Future<Map<String, dynamic>> topUp(int amount) async {
+  Future<Map<String, dynamic>> topUp(int amount, String pin) async {
     final token = await _getToken();
 
     final response = await ApiClient.post(
       '/wallet/top-up',
       token: token,
-      body: {'amount': amount},
+      body: {
+        'amount': amount,
+        'pin': pin,
+      },
     );
 
     return _handleResponse(

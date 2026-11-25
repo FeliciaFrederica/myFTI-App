@@ -99,8 +99,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined,
-                  color: AppColors.primary),
+              leading: const Icon(
+                Icons.photo_library_outlined,
+                color: AppColors.primary,
+              ),
               title: const Text('Pilih dari galeri'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -108,8 +110,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_camera_outlined,
-                  color: AppColors.primary),
+              leading: const Icon(
+                Icons.photo_camera_outlined,
+                color: AppColors.primary,
+              ),
               title: const Text('Ambil foto'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -118,10 +122,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
             if (_hasPhoto)
               ListTile(
-                leading: const Icon(Icons.delete_outline,
-                    color: AppColors.error),
-                title: const Text('Hapus foto',
-                    style: TextStyle(color: AppColors.error)),
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: AppColors.error,
+                ),
+                title: const Text(
+                  'Hapus foto',
+                  style: TextStyle(color: AppColors.error),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   setState(() {
@@ -130,6 +138,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   });
                 },
               ),
+            const SizedBox(width: double.infinity, height: 16),
           ],
         ),
       ),
@@ -233,10 +242,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   color: Colors.white,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                      color: AppColors.primary, width: 1.5),
+                                    color: AppColors.primary,
+                                    width: 1.5,
+                                  ),
                                 ),
-                                child: const Icon(Icons.photo_camera,
-                                    size: 16, color: AppColors.primary),
+                                child: const Icon(
+                                  Icons.photo_camera,
+                                  size: 16,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
                           ],
@@ -276,12 +290,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         margin: EdgeInsets.zero,
                         clipBehavior: Clip.antiAlias,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         child: ListTile(
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 16),
-                          leading: const Icon(Icons.lock_outline,
-                              color: AppColors.primary),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                          ),
+                          leading: const Icon(
+                            Icons.lock_outline,
+                            color: AppColors.primary,
+                          ),
                           title: const Text('Ubah Password'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: _saving ? null : _openChangePassword,
@@ -319,7 +337,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       disabledBackgroundColor: Colors.grey.shade300,
                       disabledForegroundColor: Colors.grey.shade500,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     child: _saving
                         ? const SizedBox(

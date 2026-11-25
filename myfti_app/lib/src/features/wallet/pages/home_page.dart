@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
 import 'package:myfti_app/src/features/transaction/services/transaction_service.dart';
 import 'package:myfti_app/src/features/transaction/models/transaction_model.dart';
@@ -6,7 +6,7 @@ import 'package:myfti_app/src/features/transaction/models/transaction_model.dart
 import 'top_up_page.dart';
 import '../../transfer/pages/transfer_page.dart';
 import '../../payment/pages/payment_page.dart';
-import '../../notification/pages/notification_page.dart';
+import '../../notification/widgets/notification_bell_button.dart';
 import '../../summary/pages/financial_summary_page.dart';
 import '../../authentication/models/user_model.dart';
 import '../../authentication/services/auth_service.dart';
@@ -33,7 +33,7 @@ class _HomePageState extends State<HomePage> {
   final TransactionService _transactionService = TransactionService();
 
   late Future<Map<String, dynamic>> _walletFuture;
-  late Future<List<TransactionModel>> _transactionFuture;
+  late Future<TransactionPageResult> _transactionFuture;
   late Future<UserModel> _userFuture;
 
   bool _isBalanceVisible = false;
@@ -100,19 +100,63 @@ class _HomePageState extends State<HomePage> {
   Future<void> _confirmLogout() async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Yakin ingin keluar dari akun myFTI?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFFF3EEFC),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text(
+          'Logout',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: textColor,
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.redAccent),
+        ),
+        content: const Text(
+          'Yakin ingin keluar dari akun myFTI?',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.black87,
+            height: 1.5,
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text(
+                'Logout',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text(
+                'Batal',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],
@@ -222,20 +266,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const NotificationPage(),
-                          ),
-                        );
-                      },
-                      icon: const Icon(
-                        Icons.notifications_none,
-                        color: primaryPurple,
-                      ),
-                    ),
+                    const NotificationBellButton(),
                     IconButton(
                       onPressed: _confirmLogout,
                       tooltip: 'Logout',
@@ -667,7 +698,7 @@ class _HomePageState extends State<HomePage> {
 
   // Menampilkan tiga transaksi terakhir dari API
   Widget _buildRecentTransactions() {
-    return FutureBuilder<List<TransactionModel>>(
+    return FutureBuilder<TransactionPageResult>(
       future: _transactionFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -713,7 +744,7 @@ class _HomePageState extends State<HomePage> {
           );
         }
 
-        final transactions = snapshot.data ?? [];
+        final transactions = snapshot.data?.transactions ?? [];
 
         if (transactions.isEmpty) {
           return Container(

@@ -1,9 +1,19 @@
 const crypto = require("crypto");
 const { Prisma } = require("../../generated/prisma/client");
 const prisma = require("../../config/prisma");
+const verifyTransactionPin = require("../../utils/verify-transaction-pin");
+const { notify, formatRupiah } = require("../../utils/notify");
 
 const MAX_RETRIES = 3;
 const MAX_WALLET_BALANCE = 2147483647;
+
+const MERCHANT_SUBCATEGORIES = {
+  KANTIN: ["Warmindo", "Kantin Teknik", "Kantin Cuweg"],
+  JUKEL_PO: ["Jukel DPM", "PO BEM", "PO DPM"],
+  AKADEMIK: ["BPP", "SPP"],
+  ALLEYWAY: [],
+  PRINT: [],
+};
 
 const getPaymentRecipients = async () => {
   const merchants = await prisma.user.findMany({
@@ -37,27 +47,23 @@ const getPaymentRecipients = async () => {
 };
 
 const createPayment = async (studentId, data) => {
-  const { category } = data;
+  const { merchantId, pin } = data;
+  const subcategory =
+    typeof data.subcategory === "string" && data.subcategory.trim()
+      ? data.subcategory.trim()
+      : null;
   const amount = Number(data.amount);
   const description =
     typeof data.description === "string"
       ? data.description.trim()
       : "";
 
-  // Validasi kategori pembayaran
-  const allowedCategories = [
-    "ALLEYWAY",
-    "PRINT",
-    "KANTIN",
-    "JUKEL_PO",
-    "AKADEMIK",
-  ];
-
-  if (!allowedCategories.includes(category)) {
-    throw Object.assign(new Error("Invalid payment category"), {
-      statusCode: 400,
-    });
-  }
+    if (description.length > 150) {
+      throw Object.assign(
+        new Error("Description must not exceed 150 characters"),
+        { statusCode: 400 }
+      );
+    }
 
   // Validasi nominal
   if (!Number.isSafeInteger(amount) || amount <= 0) {
@@ -70,35 +76,67 @@ const createPayment = async (studentId, data) => {
     try {
       return await prisma.$transaction(
         async (tx) => {
+          await verifyTransactionPin(tx, studentId, pin);
           const student = await tx.user.findUnique({
             where: { id: studentId },
             include: { wallet: true },
           });
 
-          const merchants = await tx.user.findMany({
+          const merchant = await tx.user.findFirst({
             where: {
+              id: merchantId,
               role: "MERCHANT",
-              merchantCategory: category,
             },
             include: { wallet: true },
-            take: 2,
           });
 
-          if (merchants.length !== 1) {
-            throw Object.assign(new Error("Merchant category is unavailable"), {
+          if (!merchant) {
+            throw Object.assign(new Error("Merchant not found"), {
               statusCode: 404,
             });
           }
 
-          const merchant = merchants[0];
+          const allowedCategories = [
+            "ALLEYWAY",
+            "PRINT",
+            "KANTIN",
+            "JUKEL_PO",
+            "AKADEMIK",
+          ];
 
+          if (!allowedCategories.includes(merchant.merchantCategory)) {
+            throw Object.assign(new Error("Invalid payment category"), {
+              statusCode: 400,
+            });
+          }
+
+          const allowedSubcategories =
+            MERCHANT_SUBCATEGORIES[merchant.merchantCategory];
+
+          if (
+            allowedSubcategories.length > 0 &&
+            !allowedSubcategories.includes(subcategory)
+          ) {
+            throw Object.assign(
+              new Error("Pilih submerchant pembayaran yang valid."),
+              { statusCode: 400 }
+            );
+          }
+
+          if (allowedSubcategories.length === 0 && subcategory !== null) {
+            throw Object.assign(
+              new Error("Kategori ini tidak menggunakan submerchant."),
+              { statusCode: 400 }
+            );
+          }
+          
           if (!student || student.role !== "STUDENT") {
             throw Object.assign(new Error("Student account not found"), {
               statusCode: 404,
             });
           }
 
-          if (!merchant || merchant.role !== "MERCHANT") {
+          if (merchant.role !== "MERCHANT") {
             throw Object.assign(new Error("Merchant not found"), {
               statusCode: 404,
             });
@@ -162,6 +200,7 @@ const createPayment = async (studentId, data) => {
                 amount,
                 description:
                   description || `Payment to ${merchant.fullName}`,
+                subcategory,
                 userId: studentId,
                 transferGroupId: groupId,
                 counterpartName: merchant.fullName,
@@ -172,6 +211,7 @@ const createPayment = async (studentId, data) => {
                 amount,
                 description:
                   description || `Payment from ${student.fullName}`,
+                subcategory,
                 userId: merchant.id,
                 transferGroupId: groupId,
                 counterpartName: student.fullName,
@@ -183,6 +223,20 @@ const createPayment = async (studentId, data) => {
             where: { userId: studentId },
             select: { balance: true },
           });
+
+          await notify(
+            tx,
+            studentId,
+            "Pembayaran berhasil",
+            `Pembayaran ${formatRupiah(amount)} ke ${merchant.fullName} berhasil.`
+          );
+
+          await notify(
+            tx,
+            merchant.id,
+            "Pembayaran masuk",
+            `Kamu menerima pembayaran ${formatRupiah(amount)} dari ${student.fullName}.`
+          );
 
           return {
             reference,

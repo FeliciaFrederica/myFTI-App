@@ -7,7 +7,7 @@ class ApiConfig {
   static const String _prefix = '/api';
 
   // IP laptop di jaringan yang sama dengan HP.
-  static const String _laptopIp = '127.0.0.1';
+  static const String _laptopIp = '192.168.50.60';
 
   // Opsional: timpa lewat --dart-define
   // Contoh: flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api

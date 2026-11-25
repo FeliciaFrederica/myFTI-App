@@ -13,6 +13,15 @@ exports.login = wrap(async (req, res) => {
   res.json({ success: true, message: 'Login berhasil', data });
 });
 
+exports.setupPin = wrap(async (req, res) => {
+  await authService.createPin(req.user.id, req.body.pin);
+
+  res.status(201).json({
+    success: true,
+    message: 'PIN berhasil dibuat',
+  });
+});
+
 exports.logout = wrap(async (req, res) => {
   await authService.logout(req.user.id);
   res.json({ success: true, message: 'Logout berhasil' });
@@ -39,4 +48,29 @@ exports.changePassword = wrap(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   await authService.changePassword(req.user.id, currentPassword, newPassword);
   res.json({ success: true, message: 'Password berhasil diubah' });
+});
+
+// ubah pin user yang sedang login
+exports.createPinForAuthenticatedUser = wrap(async (req, res) => {
+  await authService.createPin(req.user.id, req.body.pin);
+
+  res.status(201).json({
+    success: true,
+    message: 'PIN berhasil dibuat',
+  });
+});
+
+exports.changePin = wrap(async (req, res) => {
+  const { currentPin, newPin } = req.body;
+
+  await authService.changePin(
+    req.user.id,
+    currentPin,
+    newPin
+  );
+
+  res.json({
+    success: true,
+    message: 'PIN berhasil diubah',
+  });
 });

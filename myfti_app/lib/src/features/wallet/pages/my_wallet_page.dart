@@ -233,24 +233,28 @@ class MyWalletPageState extends State<MyWalletPage> {
                               ),
                               const SizedBox(height: 8),
                               Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Expanded(
-                                    child: Text(
-                                      _isBalanceVisible
-                                          ? _formatRupiah(balance)
-                                          : 'Rp ••••••••',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.bold,
+                                  Flexible(
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        _isBalanceVisible
+                                            ? _formatRupiah(balance)
+                                            : 'Rp ••••••••',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
                                   IconButton(
                                     onPressed: () {
                                       setState(() {
-                                        _isBalanceVisible =
-                                            !_isBalanceVisible;
+                                        _isBalanceVisible = !_isBalanceVisible;
                                       });
                                     },
                                     icon: Icon(
@@ -262,6 +266,8 @@ class MyWalletPageState extends State<MyWalletPage> {
                                     tooltip: _isBalanceVisible
                                         ? 'Sembunyikan saldo'
                                         : 'Tampilkan saldo',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
                                   ),
                                 ],
                               ),
