@@ -4,6 +4,7 @@ import 'package:myfti_app/src/features/transaction/services/transaction_service.
 import 'package:myfti_app/src/features/transaction/models/transaction_model.dart';
 
 import 'top_up_page.dart';
+import '../../transfer/pages/transfer_page.dart';
 import '../../payment/pages/payment_page.dart';
 import '../../notification/pages/notification_page.dart';
 import '../../summary/pages/financial_summary_page.dart';
@@ -50,7 +51,7 @@ class _HomePageState extends State<HomePage> {
     _transactionFuture = _transactionService.getTransactions();
   }
 
-  // Refresh saldo, profil, dan transaksi
+  // Memuat ulang saldo, profil, dan transaksi
   Future<void> _refreshData() async {
     setState(() {
       _loadData();
@@ -64,10 +65,11 @@ class _HomePageState extends State<HomePage> {
         _userFuture,
       ]);
     } catch (_) {
-      // Error
+      // Error ditampilkan pada bagian data masing-masing
     }
   }
 
+  // Mengubah nominal menjadi format Rupiah
   String _formatRupiah(int amount) {
     final formatted = amount.toString().replaceAllMapped(
       RegExp(r'\B(?=(\d{3})+(?!\d))'),
@@ -77,6 +79,7 @@ class _HomePageState extends State<HomePage> {
     return 'Rp $formatted';
   }
 
+  // Mengubah tanggal menjadi format yang mudah dibaca
   String _formatDate(DateTime date) {
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
@@ -93,6 +96,7 @@ class _HomePageState extends State<HomePage> {
     return '$day $month $year • $hour:$minute';
   }
 
+  // Menampilkan konfirmasi sebelum logout
   Future<void> _confirmLogout() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -114,14 +118,21 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+
     if (ok != true) return;
 
     await AuthService.logout();
+
     if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/login',
+      (route) => false,
+    );
   }
 
-  // Profil user
+  // Menampilkan foto profil pengguna
   Widget _buildHeaderAvatar(UserModel? user) {
     if (user != null) {
       return UserAvatar(
@@ -188,7 +199,9 @@ class _HomePageState extends State<HomePage> {
                                     children: [
                                       const Text(
                                         'Selamat Datang,',
-                                        style: TextStyle(color: Colors.grey),
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                        ),
                                       ),
                                       Text(
                                         name,
@@ -236,17 +249,17 @@ class _HomePageState extends State<HomePage> {
 
                 const SizedBox(height: 28),
 
-                // Wallet Balance
+                // Kartu saldo wallet
                 _buildBalanceCard(),
 
                 const SizedBox(height: 16),
 
-                // Financial Summary
+                // Shortcut ringkasan keuangan
                 _buildSummaryShortcut(context),
 
                 const SizedBox(height: 28),
 
-                // Menu Utama
+                // Menu utama
                 const Text(
                   'Menu Utama',
                   style: TextStyle(
@@ -269,7 +282,7 @@ class _HomePageState extends State<HomePage> {
                     _buildAction(
                       icon: Icons.send_outlined,
                       label: 'Transfer',
-                      onTap: () {},
+                      onTap: _openTransfer,
                     ),
                     _buildAction(
                       icon: Icons.payment_outlined,
@@ -286,7 +299,7 @@ class _HomePageState extends State<HomePage> {
 
                 const SizedBox(height: 28),
 
-                // Transaksi Terakhir
+                // Transaksi terakhir
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -303,7 +316,8 @@ class _HomePageState extends State<HomePage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const TransactionHistoryPage(
+                            builder: (context) =>
+                                const TransactionHistoryPage(
                               showBackButton: true,
                             ),
                           ),
@@ -328,7 +342,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Wallet Balance Card
+  // Menampilkan kartu saldo wallet
   Widget _buildBalanceCard() {
     return FutureBuilder<Map<String, dynamic>>(
       future: _walletFuture,
@@ -416,7 +430,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
 
-                // Saldo
+                // Informasi saldo
                 Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -517,7 +531,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // widget awan megamendung
+  // Menampilkan ornamen awan megamendung
   Widget _buildCloudItem({
     double? top,
     double? bottom,
@@ -547,7 +561,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Shortcut Ringkasan Keuangan
+  // Membuka halaman ringkasan keuangan
   Widget _buildSummaryShortcut(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
@@ -611,7 +625,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Menu Utama
+  // Membuat tombol menu utama
   Widget _buildAction({
     required IconData icon,
     required String label,
@@ -651,7 +665,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Transaksi Terakhir dari API
+  // Menampilkan tiga transaksi terakhir dari API
   Widget _buildRecentTransactions() {
     return FutureBuilder<List<TransactionModel>>(
       future: _transactionFuture,
@@ -729,7 +743,7 @@ class _HomePageState extends State<HomePage> {
           );
         }
 
-        // Hanya menampilkan 3 transaksi terbaru
+        // Mengambil tiga transaksi paling baru
         final recentTransactions = transactions.take(3).toList();
 
         return Column(
@@ -796,7 +810,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Nama Transaksi
+  // Menentukan nama transaksi berdasarkan jenisnya
   String _getTransactionTitle(String type) {
     switch (type) {
       case 'TOP_UP':
@@ -814,7 +828,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Ikon Transaksi
+  // Menentukan ikon transaksi berdasarkan jenisnya
   IconData _getTransactionIcon(String type) {
     switch (type) {
       case 'TOP_UP':
@@ -831,7 +845,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Navigasi Top Up
+  // Membuka halaman Isi Saldo dan memperbarui data setelah berhasil
   Future<void> _openTopUp() async {
     final result = await Navigator.push<bool>(
       context,
@@ -845,7 +859,21 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Navigasi Payment
+  // Membuka halaman Transfer dan memperbarui data setelah berhasil
+  Future<void> _openTransfer() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const TransferPage(),
+      ),
+    );
+
+    if (result == true && mounted) {
+      await _refreshData();
+    }
+  }
+
+  // Membuka halaman Pembayaran dan memperbarui data setelah berhasil
   Future<void> _openPayment() async {
     final result = await Navigator.push<bool>(
       context,
