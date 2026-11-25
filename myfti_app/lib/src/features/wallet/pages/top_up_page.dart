@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
+import 'package:myfti_app/src/core/widgets/top_notice.dart';
 
 class TopUpPage extends StatefulWidget {
   const TopUpPage({super.key});
@@ -198,13 +199,10 @@ class _TopUpPageState extends State<TopUpPage> {
 
       Navigator.pop(context, true);
 
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Isi Saldo ${_formatRupiah(amount)} berhasil!',
-          ),
-          backgroundColor: Colors.green,
-        ),
+      TopNotice.show(
+        context, 
+        'Isi Saldo ${_formatRupiah(amount)} berhasil!',
+        success: true,
       );
     } catch (error) {
       if (!mounted) return;
