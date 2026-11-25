@@ -454,18 +454,59 @@ class _TransferPageState extends State<TransferPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _walletIdController,
-                      textCapitalization: TextCapitalization.characters,
-                      onChanged: _onWalletIdChanged,
-                      decoration: _inputDecoration(
-                        hintText: 'Masukkan ID Penerima',
-                        errorText: _walletIdError,
-                        prefixIcon: const Icon(
-                          Icons.person_outline,
-                          color: primaryPurple,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _walletIdController,
+                          textCapitalization:
+                              TextCapitalization.characters,
+                          onChanged: _onWalletIdChanged,
+                          decoration: _inputDecoration(
+                            hintText: 'Masukkan ID Penerima',
+                            prefixIcon: const Icon(
+                              Icons.person_outline,
+                              color: primaryPurple,
+                            ),
+                          ).copyWith(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: _walletIdError != null
+                                    ? Colors.red
+                                    : borderColor,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: _walletIdError != null
+                                    ? Colors.red
+                                    : borderColor,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: _walletIdError != null
+                                    ? Colors.red
+                                    : primaryPurple,
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        if (_walletIdError != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            _walletIdError!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -585,9 +626,44 @@ class _TransferPageState extends State<TransferPage> {
                     minHeight: 0,
                     minWidth: 0,
                   ),
-                  errorText: _amountError,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: _amountError != null
+                          ? Colors.red
+                          : borderColor,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: _amountError != null
+                          ? Colors.red
+                          : borderColor,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: _amountError != null
+                          ? Colors.red
+                          : primaryPurple,
+                      width: 1.5,
+                    ),
+                  ),
                 ),
               ),
+
+              if (_amountError != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  _amountError!,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 20),
 
