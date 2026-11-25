@@ -20,6 +20,8 @@ class _TransferPageState extends State<TransferPage> {
   static const Color borderColor = Color(0xFFD1C4E9);
   static const Color cardColor = Color(0xFFEDE7F6);
 
+  static const int maxDescriptionLength = 150;
+
   final TransferService _transferService = TransferService();
   final WalletService _walletService = WalletService();
 
@@ -48,15 +50,17 @@ class _TransferPageState extends State<TransferPage> {
   // Pesan validasi input
   String? _walletIdError;
   String? _amountError;
+  String? _descriptionError;
 
   int get _amount => int.tryParse(_amountController.text) ?? 0;
 
   int get _balance => (_wallet?['balance'] as num?)?.toInt() ?? 0;
 
-  // Transfer hanya bisa dilanjutkan setelah saldo berhasil dimuat
+  // Transfer hanya bisa dilanjutkan setelah saldo tersedia dan input valid
   bool get _canContinueTransfer {
     return _wallet != null &&
         _loadErrorTitle == null &&
+        _descriptionError == null &&
         !_isRefreshingWallet &&
         !_isTransferring;
   }
@@ -209,6 +213,15 @@ class _TransferPageState extends State<TransferPage> {
       } else {
         _amountError = null;
       }
+    });
+  }
+
+  // Memeriksa panjang catatan transfer
+  void _onDescriptionChanged(String value) {
+    setState(() {
+      _descriptionError = value.length >= maxDescriptionLength
+          ? 'Catatan sudah mencapai batas maksimal 150 karakter.'
+          : null;
     });
   }
 
@@ -480,6 +493,22 @@ class _TransferPageState extends State<TransferPage> {
     );
   }
 
+  // Menampilkan pesan peringatan input
+  Widget _buildWarning(String? message) {
+    if (message == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 7),
+      child: Text(
+        message,
+        style: const TextStyle(
+          color: Colors.red,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
   // Kartu saldo tersedia
   Widget _buildBalanceCard() {
     final hasError = _loadErrorTitle != null;
@@ -567,6 +596,87 @@ class _TransferPageState extends State<TransferPage> {
     );
   }
 
+  // Kolom catatan transfer
+  Widget _buildDescriptionField() {
+    final currentLength = _descriptionController.text.length;
+    final isAtLimit = currentLength >= maxDescriptionLength;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Judul dan penghitung karakter dalam satu baris
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Text(
+              'Catatan (Opsional)',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+            Text(
+              '$currentLength/$maxDescriptionLength',
+              style: TextStyle(
+                fontSize: 11,
+                color: isAtLimit ? Colors.red : Colors.grey,
+                fontWeight:
+                    isAtLimit ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        TextField(
+          controller: _descriptionController,
+          enabled: !_isTransferring,
+          maxLines: 2,
+          maxLength: maxDescriptionLength,
+          onChanged: _onDescriptionChanged,
+
+          // Menyembunyikan counter bawaan Flutter
+          buildCounter: (
+            context, {
+            required int currentLength,
+            required bool isFocused,
+            int? maxLength,
+          }) {
+            return null;
+          },
+
+          decoration: _inputDecoration(
+            hintText: 'Tambahkan catatan transfer',
+          ).copyWith(
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: isAtLimit ? Colors.red : borderColor,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: isAtLimit ? Colors.red : borderColor,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: isAtLimit ? Colors.red : primaryPurple,
+                width: 1.5,
+              ),
+            ),
+          ),
+        ),
+
+        _buildWarning(_descriptionError),
+      ],
+    );
+  }
+
   // Form utama transfer
   Widget _buildTransferForm() {
     final displayedAmount = _amount;
@@ -576,7 +686,6 @@ class _TransferPageState extends State<TransferPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Saldo tersedia
           _buildBalanceCard(),
 
           const SizedBox(height: 28),
@@ -811,29 +920,7 @@ class _TransferPageState extends State<TransferPage> {
 
           const SizedBox(height: 20),
 
-          const Text(
-            'Deskripsi (Opsional)',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Kolom deskripsi
-          TextField(
-            controller: _descriptionController,
-            enabled: !_isTransferring,
-            maxLength: 100,
-            maxLines: 3,
-            decoration: _inputDecoration(
-              hintText: 'Tambahkan catatan transfer',
-            ).copyWith(
-              alignLabelWithHint: true,
-              counterText: '',
-            ),
-          ),
+          _buildDescriptionField(),
 
           const SizedBox(height: 24),
 
