@@ -93,7 +93,6 @@ class _HomePageState extends State<HomePage> {
     return '$day $month $year • $hour:$minute';
   }
 
-  // Pop up konfirmasi logout (gaya sama seperti pop up di halaman Isi Saldo)
   Future<void> _confirmLogout() async {
     final ok = await showDialog<bool>(
       context: context,

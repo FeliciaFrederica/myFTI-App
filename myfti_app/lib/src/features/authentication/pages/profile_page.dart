@@ -40,7 +40,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   String _errorText(Object e) => e.toString().replaceFirst('Exception: ', '');
 
-  // Notifikasi tampil di bagian atas halaman
+  // Notifikasi akan tampil di bagian atas halaman
   void _showNotice(String message, {required bool success}) {
     if (!mounted) return;
     TopNotice.show(context, message, success: success);
@@ -116,7 +116,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Pop up konfirmasi logout (gaya sama seperti pop up di halaman Isi Saldo)
   Future<void> _confirmLogout() async {
     final ok = await showDialog<bool>(
       context: context,

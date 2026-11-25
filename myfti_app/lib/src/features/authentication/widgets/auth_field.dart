@@ -47,9 +47,7 @@ class AuthField extends StatelessWidget {
   Widget build(BuildContext context) {
     final labelColor = onLight ? AppColors.text : Colors.white;
 
-    final errorTextColor = onLight ? AppColors.error : const Color(0xFFFFCDD2);
-    final errorBorderColor =
-        onLight ? AppColors.error : const Color(0xFFFF5252);
+    final errorColor = onLight ? AppColors.error : const Color(0xFFFF5252);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,7 +71,7 @@ class AuthField extends StatelessWidget {
           textInputAction: textInputAction,
           validator: validator,
           onChanged: onChanged,
-          // Warning muncul langsung saat user mulai mengetik
+          // Warning akan langsung muncul pada saat user mulai mengetik
           autovalidateMode: AutovalidateMode.onUserInteraction,
           style: const TextStyle(color: Color(0xFF2D2640), fontSize: 15),
           cursorColor: AppColors.primary,
@@ -89,15 +87,15 @@ class AuthField extends StatelessWidget {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             errorStyle: TextStyle(
-              color: errorTextColor,
+              color: errorColor,
               fontWeight: FontWeight.w600,
             ),
             border: _border(Colors.transparent),
             enabledBorder: _border(Colors.transparent),
             focusedBorder: _border(AppColors.primary, 1.5),
             // Frame merah saat tidak valid
-            errorBorder: _border(errorBorderColor, 1.8),
-            focusedErrorBorder: _border(errorBorderColor, 2.2),
+            errorBorder: _border(errorColor, 1.8),
+            focusedErrorBorder: _border(errorColor, 2.2),
           ),
         ),
       ],
