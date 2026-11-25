@@ -138,6 +138,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   });
                 },
               ),
+            const SizedBox(width: double.infinity, height: 16),
           ],
         ),
       ),
