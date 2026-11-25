@@ -6,6 +6,7 @@ import 'package:myfti_app/src/features/transaction/models/transaction_model.dart
 import 'top_up_page.dart';
 import '../../transfer/pages/transfer_page.dart';
 import '../../payment/pages/payment_page.dart';
+import '../../withdraw/pages/withdraw_page.dart';
 import '../../notification/widgets/notification_bell_button.dart';
 import '../../summary/pages/financial_summary_page.dart';
 import '../../authentication/models/user_model.dart';
@@ -323,7 +324,7 @@ class _HomePageState extends State<HomePage> {
                     _buildAction(
                       icon: Icons.account_balance_outlined,
                       label: 'Tarik Saldo',
-                      onTap: () {},
+                      onTap: _openWithdraw,
                     ),
                   ],
                 ),
@@ -910,6 +911,20 @@ class _HomePageState extends State<HomePage> {
       context,
       MaterialPageRoute(
         builder: (_) => const PaymentPage(),
+      ),
+    );
+
+    if (result == true && mounted) {
+      await _refreshData();
+    }
+  }
+
+  // Membuka halaman Tarik Saldo dan memperbarui data setelah berhasil
+  Future<void> _openWithdraw() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const WithdrawPage(),
       ),
     );
 
