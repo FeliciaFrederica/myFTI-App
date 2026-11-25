@@ -125,16 +125,25 @@ class AuthService {
     required String setupToken,
   }) async {
     final res = await _guard(
-      ApiClient.post(
-        '/auth/pin/setup',
-        body: {'pin': pin},
-        token: setupToken,
-      ),
+      ApiClient.post('/auth/pin/setup', body: {'pin': pin}, token: setupToken),
     );
 
     final body = _decode(res);
 
     if (res.statusCode != 201) {
+      throw Exception(_message(body, 'Gagal membuat PIN'));
+    }
+  }
+
+  // Membuat PIN untuk user yang sudah login tetapi belum memiliki PIN.
+  static Future<void> createPin({required String pin}) async {
+    final res = await _guard(
+      _send('POST', '/auth/pin/create', body: {'pin': pin}, auth: true),
+    );
+
+    final body = _decode(res);
+
+    if (res.statusCode != 200 && res.statusCode != 201) {
       throw Exception(_message(body, 'Gagal membuat PIN'));
     }
   }
@@ -263,10 +272,7 @@ class AuthService {
       _send(
         'PUT',
         '/auth/password',
-        body: {
-          'currentPassword': currentPassword,
-          'newPassword': newPassword,
-        },
+        body: {'currentPassword': currentPassword, 'newPassword': newPassword},
         auth: true,
       ),
     );

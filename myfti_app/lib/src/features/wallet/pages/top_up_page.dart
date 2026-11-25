@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
 import 'package:myfti_app/src/core/widgets/top_notice.dart';
+import 'package:myfti_app/src/features/transaction/pages/transaction_pin_page.dart';
 
 class TopUpPage extends StatefulWidget {
   const TopUpPage({super.key});
@@ -21,7 +22,7 @@ class _TopUpPageState extends State<TopUpPage> {
   late Future<Map<String, dynamic>> _walletFuture;
 
   bool _isLoading = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -32,12 +33,7 @@ class _TopUpPageState extends State<TopUpPage> {
     _walletFuture = _walletService.getWallet();
   }
 
-  final List<int> _amountOptions = [
-    50000,
-    100000,
-    200000,
-    500000,
-  ];
+  final List<int> _amountOptions = [50000, 100000, 200000, 500000];
 
   int? _selectedAmount;
   String? _amountError;
@@ -82,12 +78,12 @@ class _TopUpPageState extends State<TopUpPage> {
   void _showConfirmation() {
     final amount = _selectedAmount ?? _amount;
 
-      if (amount <= 0) {
-        setState(() {
-          _amountError = 'Nominal wajib diisi.';
-        });
-        return;
-      }
+    if (amount <= 0) {
+      setState(() {
+        _amountError = 'Nominal wajib diisi.';
+      });
+      return;
+    }
 
     if (amount < 10000) {
       setState(() {
@@ -124,9 +120,7 @@ class _TopUpPageState extends State<TopUpPage> {
                 height: 1.5,
               ),
               children: [
-                const TextSpan(
-                  text: 'Kamu akan menambahkan saldo sebesar ',
-                ),
+                const TextSpan(text: 'Kamu akan menambahkan saldo sebesar '),
                 TextSpan(
                   text: _formatRupiah(amount),
                   style: const TextStyle(
@@ -158,10 +152,7 @@ class _TopUpPageState extends State<TopUpPage> {
                 },
                 child: const Text(
                   'Konfirmasi',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -186,16 +177,24 @@ class _TopUpPageState extends State<TopUpPage> {
   }
 
   Future<void> _submitTopUp(int amount) async {
+    final pin = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const TransactionPinPage()),
+    );
+
+    if (!mounted || pin == null) return;
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      await _walletService.topUp(amount);
+      await _walletService.topUp(amount, pin);
+
       if (!mounted) return;
 
       TopNotice.show(
-        context, 
+        context,
         'Isi Saldo ${_formatRupiah(amount)} berhasil!',
         success: true,
       );
@@ -205,17 +204,14 @@ class _TopUpPageState extends State<TopUpPage> {
       if (!mounted) return;
 
       final errorMessage = error.toString().toLowerCase();
-      final message = errorMessage.contains('clientexception') ||
+      final message =
+          errorMessage.contains('clientexception') ||
               errorMessage.contains('socketexception') ||
               errorMessage.contains('connection refused')
-            ? 'Gagal terhubung ke server. Periksa koneksi dan coba lagi.'
-            : 'Top Up gagal. Silakan coba lagi.';
+          ? 'Gagal terhubung ke server. Periksa koneksi dan coba lagi.'
+          : error.toString().replaceFirst('Exception: ', '');
 
-      TopNotice.show(
-        context,
-        message,
-        success: false,
-      );
+      TopNotice.show(context, message, success: false);
     } finally {
       if (mounted) {
         setState(() {
@@ -240,10 +236,7 @@ class _TopUpPageState extends State<TopUpPage> {
       appBar: AppBar(
         title: const Text(
           'Isi Saldo',
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         backgroundColor: backgroundColor,
         elevation: 0,
@@ -335,8 +328,7 @@ class _TopUpPageState extends State<TopUpPage> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _amountOptions.length,
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
@@ -350,24 +342,22 @@ class _TopUpPageState extends State<TopUpPage> {
                     onPressed: () => _selectAmount(amount),
                     style: OutlinedButton.styleFrom(
                       backgroundColor: isSelected
-                        ? const Color(0xFFF3EEFC)
-                        : Colors.white,
-                    foregroundColor: primaryPurple,
-                    side: BorderSide(
-                      color: isSelected
-                          ? primaryPurple
-                          : const Color(0xFFD1C4E9),
-                      width: isSelected ? 1.5 : 1,
-                    ),
+                          ? const Color(0xFFF3EEFC)
+                          : Colors.white,
+                      foregroundColor: primaryPurple,
+                      side: BorderSide(
+                        color: isSelected
+                            ? primaryPurple
+                            : const Color(0xFFD1C4E9),
+                        width: isSelected ? 1.5 : 1,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: Text(
                       _formatRupiah(amount),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   );
                 },
@@ -389,9 +379,7 @@ class _TopUpPageState extends State<TopUpPage> {
               TextField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                ],
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 onChanged: _onCustomAmountChanged,
                 decoration: InputDecoration(
                   prefixIcon: const Padding(
@@ -415,15 +403,11 @@ class _TopUpPageState extends State<TopUpPage> {
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFD1C4E9),
-                    ),
+                    borderSide: const BorderSide(color: Color(0xFFD1C4E9)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFD1C4E9),
-                    ),
+                    borderSide: const BorderSide(color: Color(0xFFD1C4E9)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -434,16 +418,11 @@ class _TopUpPageState extends State<TopUpPage> {
                   ),
                   errorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Colors.red,
-                    ),
+                    borderSide: const BorderSide(color: Colors.red),
                   ),
                   focusedErrorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Colors.red,
-                      width: 1.5,
-                    ),
+                    borderSide: const BorderSide(color: Colors.red, width: 1.5),
                   ),
                 ),
               ),
@@ -485,10 +464,7 @@ class _TopUpPageState extends State<TopUpPage> {
                     const SizedBox(height: 8),
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Biaya Admin'),
-                        Text('Rp 0'),
-                      ],
+                      children: [Text('Biaya Admin'), Text('Rp 0')],
                     ),
                   ],
                 ),

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
 
 import '../../notification/services/local_notification_service.dart';
+import '../../transaction/pages/transaction_pin_page.dart';
 import '../services/payment_service.dart';
 
 class PaymentPage extends StatefulWidget {
@@ -305,10 +306,18 @@ class _PaymentPageState extends State<PaymentPage> {
     });
 
     try {
+      final pin = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(builder: (_) => const TransactionPinPage()),
+      );
+
+      if (!mounted || pin == null) return;
+
       final result = await PaymentService.createPayment(
         merchantId: _selectedMerchantId!,
         amount: _amount,
         description: _notesController.text.trim(),
+        pin: pin,
       );
 
       if (!mounted) return;
@@ -375,16 +384,18 @@ class _PaymentPageState extends State<PaymentPage> {
     } catch (error) {
       if (!mounted) return;
 
-      setState(() {
-        _isPaying = false;
-      });
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error.toString().replaceFirst('Exception: ', '')),
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPaying = false;
+        });
+      }
     }
   }
 
