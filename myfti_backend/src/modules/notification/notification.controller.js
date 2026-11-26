@@ -35,6 +35,20 @@ const markAsRead = async (req, res, next) => {
   }
 };
 
+const markAllAsRead = async (req, res, next) => {
+  try {
+    const data = await notificationService.markAllAsRead(req.user.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Semua notifikasi ditandai sudah dibaca.",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const deleteNotification = async (req, res, next) => {
   try {
     const data = await notificationService.deleteNotification(
@@ -69,6 +83,7 @@ const deleteAllNotifications = async (req, res, next) => {
 module.exports = {
   listNotifications,
   markAsRead,
+  markAllAsRead,
   deleteNotification,
   deleteAllNotifications,
 };

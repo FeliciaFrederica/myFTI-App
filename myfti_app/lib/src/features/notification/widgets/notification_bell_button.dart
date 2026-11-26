@@ -80,7 +80,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: _openNotifications,
-      tooltip: 'Notification',
+      tooltip: 'Notifikasi',
       icon: Stack(
         clipBehavior: Clip.none,
         children: [

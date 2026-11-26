@@ -379,9 +379,7 @@ class _NotificationPageState extends State<NotificationPage> {
     });
 
     try {
-      await Future.wait(
-        unreadItems.map((n) => NotificationService.markAsRead(n.id)),
-      );
+      await NotificationService.markAllAsRead();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -503,13 +501,16 @@ class _NotificationPageState extends State<NotificationPage> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Notification',
+          'Notifikasi',
           style: TextStyle(
             color: AppColors.text,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.text),
         actions: [
@@ -567,10 +568,13 @@ class _NotificationPageState extends State<NotificationPage> {
           const SizedBox(width: 4),
         ],
       ),
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: _load,
-        child: _buildBody(),
+      body: SafeArea(
+        top: false,
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: _load,
+          child: _buildBody(),
+        ),
       ),
     );
   }

@@ -56,6 +56,19 @@ const markAsRead = async (userId, notificationId) => {
   });
 };
 
+const markAllAsRead = async (userId) => {
+  if (!userId) {
+    throw createError("Mohon login terlebih dahulu.", 401);
+  }
+
+  const result = await prisma.notification.updateMany({
+    where: { userId, isRead: false },
+    data: { isRead: true },
+  });
+
+  return { updatedCount: result.count };
+};
+
 const deleteNotification = async (userId, notificationId) => {
   if (!userId) {
     throw createError("Mohon login terlebih dahulu.", 401);
@@ -91,6 +104,7 @@ const deleteAllNotifications = async (userId) => {
 module.exports = {
   listNotifications,
   markAsRead,
+  markAllAsRead,
   deleteNotification,
   deleteAllNotifications,
 };

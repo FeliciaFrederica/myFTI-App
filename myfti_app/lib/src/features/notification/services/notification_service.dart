@@ -80,6 +80,26 @@ class NotificationService {
     }
   }
 
+  static Future<void> markAllAsRead() async {
+    final token = await SessionService.getToken();
+
+    final res = await ApiClient.put(
+      '/notifications/read-all',
+      token: token,
+    ).timeout(const Duration(seconds: 15));
+
+    if (res.statusCode == 401) {
+      await SessionService.clear();
+      throw Exception('Sesi berakhir, silakan login lagi');
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception(
+        _message(_decode(res), 'Gagal menandai semua notifikasi'),
+      );
+    }
+  }
+
   static Future<void> delete(String id) async {
     final token = await SessionService.getToken();
 
