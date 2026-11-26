@@ -46,4 +46,8 @@ class ApiClient {
       body: body == null ? null : jsonEncode(body),
     );
   }
+
+  static Future<http.Response> delete(String endpoint, {String? token}) {
+    return http.delete(_uri(endpoint), headers: _headers(token));
+  }
 }
