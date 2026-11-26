@@ -1,34 +1,31 @@
-﻿import 'package:flutter/material.dart';
-import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
-import 'package:myfti_app/src/features/transaction/services/transaction_service.dart';
-import 'package:myfti_app/src/features/transaction/models/transaction_model.dart';
+import 'package:flutter/material.dart';
 
-import 'top_up_page.dart';
-import '../../transfer/pages/transfer_page.dart';
-import '../../payment/pages/payment_page.dart';
-import '../../withdraw/pages/withdraw_page.dart';
-import '../../notification/widgets/notification_bell_button.dart';
-import '../../summary/pages/financial_summary_page.dart';
 import '../../authentication/models/user_model.dart';
 import '../../authentication/services/auth_service.dart';
 import '../../authentication/widgets/user_avatar.dart';
+import '../../notification/widgets/notification_bell_button.dart';
+import '../../payment/pages/payment_page.dart';
+import '../../summary/pages/financial_summary_page.dart';
+import '../../transaction/models/transaction_model.dart';
 import '../../transaction/pages/transaction_history_page.dart';
+import '../../transaction/services/transaction_service.dart';
+import '../../transfer/pages/transfer_page.dart';
+import '../../wallet/services/wallet_service.dart';
+import '../../withdraw/pages/withdraw_page.dart';
+import 'top_up_page.dart';
 
 class HomePage extends StatefulWidget {
-  final VoidCallback? onProfileTap;
+  const HomePage({super.key, this.onProfileTap});
 
-  const HomePage({
-    super.key,
-    this.onProfileTap,
-  });
+  final VoidCallback? onProfileTap;
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  static const Color primaryPurple = Color(0xFF673AB7);
-  static const Color textColor = Color(0xFF2D1B46);
+  static const Color _purple = Color(0xFF673AB7);
+  static const Color _text = Color(0xFF2D1B46);
 
   final WalletService _walletService = WalletService();
   final TransactionService _transactionService = TransactionService();
@@ -37,98 +34,87 @@ class _HomePageState extends State<HomePage> {
   late Future<TransactionPageResult> _transactionFuture;
   late Future<UserModel> _userFuture;
 
-  bool _isBalanceVisible = false;
+  bool _balanceVisible = false;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    _userFuture = AuthService.getProfile();
   }
 
-  // Memuat saldo dan transaksi dari API
   void _loadData() {
     _walletFuture = _walletService.getWallet();
     _transactionFuture = _transactionService.getTransactions();
+    _userFuture = AuthService.getProfile();
   }
 
-  // Memuat ulang saldo, profil, dan transaksi
   Future<void> _refreshData() async {
-    setState(() {
-      _loadData();
-      _userFuture = AuthService.getProfile();
-    });
+    setState(_loadData);
 
     try {
-      await Future.wait([
-        _walletFuture,
-        _transactionFuture,
-        _userFuture,
-      ]);
+      await Future.wait([_walletFuture, _transactionFuture, _userFuture]);
     } catch (_) {
-      // Error ditampilkan pada bagian data masing-masing
+      // Error ditampilkan pada bagian data yang gagal dimuat.
     }
   }
 
-  // Mengubah nominal menjadi format Rupiah
   String _formatRupiah(int amount) {
     final formatted = amount.toString().replaceAllMapped(
       RegExp(r'\B(?=(\d{3})+(?!\d))'),
-      (match) => '.',
+      (_) => '.',
     );
-
     return 'Rp $formatted';
   }
 
-  // Mengubah tanggal menjadi format yang mudah dibaca
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
 
     final day = date.day.toString().padLeft(2, '0');
-    final month = months[date.month - 1];
-    final year = date.year;
-
     final hour = date.hour.toString().padLeft(2, '0');
     final minute = date.minute.toString().padLeft(2, '0');
 
-    return '$day $month $year • $hour:$minute';
+    return '$day ${months[date.month - 1]} ${date.year} • $hour:$minute';
   }
 
-  // Menampilkan konfirmasi sebelum logout
   Future<void> _confirmLogout() async {
-    final ok = await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFFF3EEFC),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'Logout',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: textColor,
+            color: _text,
           ),
         ),
         content: const Text(
           'Yakin ingin keluar dari akun myFTI?',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.black87,
-            height: 1.5,
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
         ),
         actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         actions: [
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryPurple,
+                backgroundColor: _purple,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 elevation: 0,
@@ -136,13 +122,9 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onPressed: () => Navigator.pop(dialogContext, true),
               child: const Text(
                 'Logout',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -164,20 +146,14 @@ class _HomePageState extends State<HomePage> {
       ),
     );
 
-    if (ok != true) return;
+    if (confirmed != true) return;
 
     await AuthService.logout();
-
     if (!mounted) return;
 
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/login',
-      (route) => false,
-    );
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
   }
 
-  // Menampilkan foto profil pengguna
   Widget _buildHeaderAvatar(UserModel? user) {
     if (user != null) {
       return UserAvatar(
@@ -190,10 +166,7 @@ class _HomePageState extends State<HomePage> {
     return const CircleAvatar(
       radius: 20,
       backgroundColor: Color(0xFFEDE7F6),
-      child: Icon(
-        Icons.person,
-        color: primaryPurple,
-      ),
+      child: Icon(Icons.person, color: _purple),
     );
   }
 
@@ -204,7 +177,7 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          color: primaryPurple,
+          color: _purple,
           onRefresh: _refreshData,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -212,159 +185,25 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: widget.onProfileTap,
-                        borderRadius: BorderRadius.circular(30),
-                        child: FutureBuilder<UserModel>(
-                          future: _userFuture,
-                          builder: (context, snapshot) {
-                            final user = snapshot.data;
-
-                            final String name;
-                            if (snapshot.hasError) {
-                              name = 'Mahasiswa FTI!';
-                            } else if (user != null) {
-                              name = '${user.name}!';
-                            } else {
-                              name = 'Memuat profil...';
-                            }
-
-                            return Row(
-                              children: [
-                                _buildHeaderAvatar(user),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Selamat Datang,',
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                      Text(
-                                        name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: textColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    const NotificationBellButton(),
-                    IconButton(
-                      onPressed: _confirmLogout,
-                      tooltip: 'Logout',
-                      icon: const Icon(
-                        Icons.logout,
-                        color: primaryPurple,
-                      ),
-                    ),
-                  ],
-                ),
-
+                _buildHeader(),
                 const SizedBox(height: 28),
-
-                // Kartu saldo wallet
                 _buildBalanceCard(),
-
                 const SizedBox(height: 16),
-
-                // Shortcut ringkasan keuangan
-                _buildSummaryShortcut(context),
-
+                _buildSummaryShortcut(),
                 const SizedBox(height: 28),
-
-                // Menu utama
                 const Text(
                   'Menu Utama',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: textColor,
+                    color: _text,
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildAction(
-                      icon: Icons.add_circle_outline,
-                      label: 'Isi Saldo',
-                      onTap: _openTopUp,
-                    ),
-                    _buildAction(
-                      icon: Icons.send_outlined,
-                      label: 'Transfer',
-                      onTap: _openTransfer,
-                    ),
-                    _buildAction(
-                      icon: Icons.payment_outlined,
-                      label: 'Pembayaran',
-                      onTap: _openPayment,
-                    ),
-                    _buildAction(
-                      icon: Icons.account_balance_outlined,
-                      label: 'Tarik Saldo',
-                      onTap: _openWithdraw,
-                    ),
-                  ],
-                ),
-
+                _buildActions(),
                 const SizedBox(height: 28),
-
-                // Transaksi terakhir
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Transaksi Terakhir',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const TransactionHistoryPage(
-                              showBackButton: true,
-                            ),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        'Lihat Semua',
-                        style: TextStyle(color: primaryPurple),
-                      ),
-                    ),
-                  ],
-                ),
-
+                _buildRecentTransactionsHeader(),
                 _buildRecentTransactions(),
-
                 const SizedBox(height: 20),
               ],
             ),
@@ -374,109 +213,121 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Menampilkan kartu saldo wallet
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            onTap: widget.onProfileTap,
+            borderRadius: BorderRadius.circular(30),
+            child: FutureBuilder<UserModel>(
+              future: _userFuture,
+              builder: (context, snapshot) {
+                final user = snapshot.data;
+                final name = snapshot.hasError
+                    ? 'Mahasiswa FTI!'
+                    : user != null
+                    ? '${user.name}!'
+                    : 'Memuat profil...';
+
+                return Row(
+                  children: [
+                    _buildHeaderAvatar(user),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Selamat Datang,',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                          Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: _text,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+        const NotificationBellButton(),
+        IconButton(
+          onPressed: _confirmLogout,
+          tooltip: 'Logout',
+          icon: const Icon(Icons.logout, color: _purple),
+        ),
+      ],
+    );
+  }
+
   Widget _buildBalanceCard() {
     return FutureBuilder<Map<String, dynamic>>(
       future: _walletFuture,
       builder: (context, snapshot) {
-        String balanceText = 'Memuat saldo...';
+        final rawBalance = snapshot.data?['balance'];
+        final balance = rawBalance is num ? rawBalance.toInt() : 0;
 
-        if (snapshot.hasData) {
-          final balance = (snapshot.data!['balance'] as num).toInt();
-
-          balanceText = _isBalanceVisible
+        final String balanceText;
+        if (snapshot.hasError) {
+          balanceText = 'Gagal memuat saldo';
+        } else if (!snapshot.hasData) {
+          balanceText = 'Memuat saldo...';
+        } else {
+          balanceText = _balanceVisible
               ? _formatRupiah(balance)
               : 'Rp ••••••••';
-        } else if (snapshot.hasError) {
-          balanceText = 'Gagal memuat saldo';
         }
 
         return Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: primaryPurple,
+            color: _purple,
             borderRadius: BorderRadius.circular(24),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
             child: Stack(
               children: [
-                Positioned.fill(
+                Positioned(
+                  right: -24,
+                  top: -20,
                   child: IgnorePointer(
-                    child: ShaderMask(
-                      shaderCallback: (Rect bounds) {
-                        return const LinearGradient(
-                          begin: Alignment.centerRight,
-                          end: Alignment.centerLeft,
-                          colors: [
-                            Colors.white,
-                            Colors.white54,
-                            Colors.transparent,
-                          ],
-                          stops: [0.0, 0.42, 0.72],
-                        ).createShader(bounds);
-                      },
-                      blendMode: BlendMode.dstIn,
-                      child: Opacity(
-                        opacity: 0.16,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            _buildCloudItem(
-                              right: -25,
-                              top: -20,
-                              width: 170,
-                              angle: -0.15,
-                            ),
-                            _buildCloudItem(
-                              right: -15,
-                              bottom: -25,
-                              width: 150,
-                              angle: 0.2,
-                              flipX: true,
-                            ),
-                            _buildCloudItem(
-                              right: 110,
-                              top: 10,
-                              width: 105,
-                              angle: 0.25,
-                              flipX: true,
-                            ),
-                            _buildCloudItem(
-                              right: 95,
-                              bottom: 5,
-                              width: 120,
-                              angle: -0.2,
-                            ),
-                            _buildCloudItem(
-                              right: 185,
-                              top: 45,
-                              width: 85,
-                              angle: -0.35,
-                              flipX: true,
-                            ),
-                          ],
-                        ),
+                    child: Opacity(
+                      opacity: 0.13,
+                      child: Image.asset(
+                        'assets/images/mega_mendung.png',
+                        width: 230,
+                        fit: BoxFit.contain,
+                        color: Colors.white,
                       ),
                     ),
                   ),
                 ),
-
-                // Informasi saldo
                 Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.account_balance_wallet_outlined,
                             color: Colors.white,
                             size: 32,
                           ),
-                          const SizedBox(width: 10),
-                          const Text(
+                          SizedBox(width: 10),
+                          Text(
                             'Dompet Digital myFTI',
                             style: TextStyle(
                               color: Colors.white,
@@ -489,66 +340,48 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 20),
                       const Text(
                         'Saldo Tersedia',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
                       Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Flexible(
-                            child: snapshot.hasError
-                                ? Text(
-                                    balanceText,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  )
-                                : FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      balanceText,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                          if (snapshot.hasError)
-                            IconButton(
-                              onPressed: _refreshData,
-                              icon: const Icon(
-                                Icons.refresh_rounded,
+                          Expanded(
+                            child: Text(
+                              balanceText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
                                 color: Colors.white,
-                                size: 22,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
                               ),
-                              tooltip: 'Muat ulang saldo',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
                             ),
+                          ),
                           if (snapshot.hasData)
                             IconButton(
                               onPressed: () {
                                 setState(() {
-                                  _isBalanceVisible = !_isBalanceVisible;
+                                  _balanceVisible = !_balanceVisible;
                                 });
                               },
+                              tooltip: _balanceVisible
+                                  ? 'Sembunyikan saldo'
+                                  : 'Tampilkan saldo',
                               icon: Icon(
-                                _isBalanceVisible
+                                _balanceVisible
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
                                 color: Colors.white,
                               ),
-                              tooltip: _isBalanceVisible
-                                  ? 'Sembunyikan saldo'
-                                  : 'Tampilkan saldo',
+                            ),
+                          if (snapshot.hasError)
+                            IconButton(
+                              onPressed: _refreshData,
+                              tooltip: 'Muat ulang saldo',
+                              icon: const Icon(
+                                Icons.refresh_rounded,
+                                color: Colors.white,
+                              ),
                             ),
                         ],
                       ),
@@ -563,46 +396,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Menampilkan ornamen awan megamendung
-  Widget _buildCloudItem({
-    double? top,
-    double? bottom,
-    double? right,
-    double? left,
-    required double width,
-    double angle = 0,
-    bool flipX = false,
-  }) {
-    return Positioned(
-      top: top,
-      bottom: bottom,
-      right: right,
-      left: left,
-      child: Transform.rotate(
-        angle: angle,
-        child: Transform.flip(
-          flipX: flipX,
-          child: Image.asset(
-            'assets/images/mega_mendung.png',
-            width: width,
-            fit: BoxFit.contain,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Membuka halaman ringkasan keuangan
-  Widget _buildSummaryShortcut(BuildContext context) {
+  Widget _buildSummaryShortcut() {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => const FinancialSummaryPage(),
-          ),
+          MaterialPageRoute(builder: (_) => const FinancialSummaryPage()),
         );
       },
       child: Container(
@@ -611,57 +411,74 @@ class _HomePageState extends State<HomePage> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Row(
+        child: const Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
+            DecoratedBox(
               decoration: BoxDecoration(
-                color: const Color(0xFFEDE7F6),
-                borderRadius: BorderRadius.circular(12),
+                color: Color(0xFFEDE7F6),
+                borderRadius: BorderRadius.all(Radius.circular(12)),
               ),
-              child: const Icon(
-                Icons.insights_outlined,
-                color: primaryPurple,
+              child: Padding(
+                padding: EdgeInsets.all(10),
+                child: Icon(Icons.insights_outlined, color: _purple),
               ),
             ),
-            const SizedBox(width: 12),
-            const Expanded(
+            SizedBox(width: 12),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Ringkasan Keuangan',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: _text),
                   ),
                   SizedBox(height: 2),
                   Text(
                     'Rekap pemasukan & pengeluaran',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right,
-              color: Colors.grey,
-            ),
+            Icon(Icons.chevron_right, color: Colors.grey),
           ],
         ),
       ),
     );
   }
 
-  // Membuat tombol menu utama
+  Widget _buildActions() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildAction(
+          icon: Icons.add_circle_outline,
+          label: 'Isi Saldo',
+          onTap: _openTopUp,
+        ),
+        _buildAction(
+          icon: Icons.send_outlined,
+          label: 'Transfer',
+          onTap: _openTransfer,
+        ),
+        _buildAction(
+          icon: Icons.payment_outlined,
+          label: 'Pembayaran',
+          onTap: _openPayment,
+        ),
+        _buildAction(
+          icon: Icons.account_balance_outlined,
+          label: 'Tarik Saldo',
+          onTap: _openWithdraw,
+        ),
+      ],
+    );
+  }
+
   Widget _buildAction({
     required IconData icon,
     required String label,
-    required VoidCallback onTap,
+    required Future<void> Function() onTap,
   }) {
     return InkWell(
       onTap: onTap,
@@ -676,20 +493,13 @@ class _HomePageState extends State<HomePage> {
                 color: const Color(0xFFEDE7F6),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                icon,
-                color: primaryPurple,
-                size: 26,
-              ),
+              child: Icon(icon, color: _purple, size: 26),
             ),
             const SizedBox(height: 8),
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                color: textColor,
-              ),
+              style: const TextStyle(fontSize: 12, color: _text),
             ),
           ],
         ),
@@ -697,7 +507,34 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Menampilkan tiga transaksi terakhir dari API
+  Widget _buildRecentTransactionsHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'Transaksi Terakhir',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: _text,
+          ),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    const TransactionHistoryPage(showBackButton: true),
+              ),
+            );
+          },
+          child: const Text('Lihat Semua', style: TextStyle(color: _purple)),
+        ),
+      ],
+    );
+  }
+
   Widget _buildRecentTransactions() {
     return FutureBuilder<TransactionPageResult>(
       future: _transactionFuture,
@@ -705,42 +542,17 @@ class _HomePageState extends State<HomePage> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
             padding: EdgeInsets.all(24),
-            child: Center(
-              child: CircularProgressIndicator(
-                color: primaryPurple,
-              ),
-            ),
+            child: Center(child: CircularProgressIndicator(color: _purple)),
           );
         }
 
         if (snapshot.hasError) {
-          return Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.redAccent,
-                  size: 32,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Gagal memuat transaksi.',
-                  style: TextStyle(color: textColor),
-                ),
-                TextButton(
-                  onPressed: _refreshData,
-                  child: const Text(
-                    'Coba Lagi',
-                    style: TextStyle(color: primaryPurple),
-                  ),
-                ),
-              ],
+          return _transactionMessage(
+            icon: Icons.error_outline,
+            message: 'Gagal memuat transaksi.',
+            action: TextButton(
+              onPressed: _refreshData,
+              child: const Text('Coba Lagi', style: TextStyle(color: _purple)),
             ),
           );
         }
@@ -748,64 +560,38 @@ class _HomePageState extends State<HomePage> {
         final transactions = snapshot.data?.transactions ?? [];
 
         if (transactions.isEmpty) {
-          return Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Column(
-              children: [
-                Icon(
-                  Icons.receipt_long_outlined,
-                  color: Colors.grey,
-                  size: 36,
-                ),
-                SizedBox(height: 10),
-                Text(
-                  'Belum ada transaksi.',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
+          return _transactionMessage(
+            icon: Icons.receipt_long_outlined,
+            message: 'Belum ada transaksi.',
           );
         }
 
-        // Mengambil tiga transaksi paling baru
-        final recentTransactions = transactions.take(3).toList();
-
         return Column(
-          children: recentTransactions.map((transaction) {
+          children: transactions.take(3).map((transaction) {
             final isIncoming = transaction.isIncoming;
             final isSuccess = transaction.status == 'SUCCESS';
-
-            final title = _getTransactionTitle(transaction.type);
-            final icon = _getTransactionIcon(transaction.type);
-
             final amount = _formatRupiah(transaction.amount);
-            final displayAmount = isIncoming ? '+ $amount' : '- $amount';
 
             return Card(
               color: Colors.white,
               elevation: 0,
               margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: ListTile(
                 leading: CircleAvatar(
                   backgroundColor: const Color(0xFFEDE7F6),
                   child: Icon(
-                    icon,
-                    color: primaryPurple,
+                    _transactionIcon(transaction.type),
+                    color: _purple,
                   ),
                 ),
                 title: Text(
-                  title,
+                  _transactionTitle(transaction.type),
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: textColor,
+                    color: _text,
                   ),
                 ),
                 subtitle: Column(
@@ -823,15 +609,15 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
                 trailing: Text(
-                  displayAmount,
+                  isIncoming ? '+ $amount' : '- $amount',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                     color: !isSuccess
                         ? Colors.grey
                         : isIncoming
-                            ? Colors.green
-                            : Colors.redAccent,
+                        ? Colors.green
+                        : Colors.redAccent,
                   ),
                 ),
               ),
@@ -842,8 +628,33 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Menentukan nama transaksi berdasarkan jenisnya
-  String _getTransactionTitle(String type) {
+  Widget _transactionMessage({
+    required IconData icon,
+    required String message,
+    Widget? action,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.grey, size: 36),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            style: const TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+          if (action != null) action,
+        ],
+      ),
+    );
+  }
+
+  String _transactionTitle(String type) {
     switch (type) {
       case 'TOP_UP':
         return 'Isi Saldo';
@@ -860,8 +671,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Menentukan ikon transaksi berdasarkan jenisnya
-  IconData _getTransactionIcon(String type) {
+  IconData _transactionIcon(String type) {
     switch (type) {
       case 'TOP_UP':
         return Icons.add_circle_outline;
@@ -877,59 +687,35 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Membuka halaman Isi Saldo dan memperbarui data setelah berhasil
   Future<void> _openTopUp() async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => const TopUpPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const TopUpPage()),
     );
-
-    if (result == true && mounted) {
-      await _refreshData();
-    }
+    if (result == true && mounted) await _refreshData();
   }
 
-  // Membuka halaman Transfer dan memperbarui data setelah berhasil
   Future<void> _openTransfer() async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => const TransferPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const TransferPage()),
     );
-
-    if (result == true && mounted) {
-      await _refreshData();
-    }
+    if (result == true && mounted) await _refreshData();
   }
 
-  // Membuka halaman Pembayaran dan memperbarui data setelah berhasil
   Future<void> _openPayment() async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => const PaymentPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const PaymentPage()),
     );
-
-    if (result == true && mounted) {
-      await _refreshData();
-    }
+    if (result == true && mounted) await _refreshData();
   }
 
-  // Membuka halaman Tarik Saldo dan memperbarui data setelah berhasil
   Future<void> _openWithdraw() async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => const WithdrawPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const WithdrawPage()),
     );
-
-    if (result == true && mounted) {
-      await _refreshData();
-    }
+    if (result == true && mounted) await _refreshData();
   }
 }

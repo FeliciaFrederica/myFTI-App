@@ -243,21 +243,6 @@ class _PaymentPageState extends State<PaymentPage> {
     });
   }
 
-  // Memeriksa perubahan nominal pembayaran
-  void _onAmountChanged(String value) {
-    final amount = int.tryParse(value) ?? 0;
-
-    setState(() {
-      if (value.trim().isEmpty) {
-        _amountError = null;
-      } else if (amount < minPayment) {
-        _amountError = 'Minimal pembayaran adalah Rp10.000.';
-      } else {
-        _amountError = null;
-      }
-    });
-  }
-
   // Memeriksa panjang catatan pembayaran
   void _onNotesChanged(String value) {
     setState(() {
@@ -350,28 +335,6 @@ class _PaymentPageState extends State<PaymentPage> {
     if (confirmed == true && mounted) {
       await _submitPayment();
     }
-  }
-
-  Widget _confirmationRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Text(label, style: const TextStyle(color: Colors.grey)),
-        ),
-        const SizedBox(width: 12),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildSubcategorySelector() {
@@ -731,7 +694,6 @@ class _PaymentPageState extends State<PaymentPage> {
           enabled: !_isPaying,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          onChanged: _onAmountChanged,
           decoration:
               _inputDecoration(
                 hint: 'Masukkan nominal pembayaran',
