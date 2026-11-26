@@ -72,9 +72,9 @@ class _NotificationPageState extends State<NotificationPage> {
   _NotifVisual _visualFor(AppNotification item) {
     final lower = '${item.title} ${item.message}'.toLowerCase();
 
-    if (lower.contains('top up')) {
+    if (lower.contains('top up') || lower.contains('isi saldo')) {
       return const _NotifVisual(
-        badge: 'TOP UP',
+        badge: 'ISI SALDO',
         icon: Icons.add_circle_outline_rounded,
         accent: AppColors.success,
         sign: '+',
@@ -88,9 +88,9 @@ class _NotificationPageState extends State<NotificationPage> {
         sign: '+',
       );
     }
-    if (lower.contains('withdraw')) {
+    if (lower.contains('withdraw') || lower.contains('tarik saldo')) {
       return const _NotifVisual(
-        badge: 'WITHDRAW',
+        badge: 'TARIK SALDO',
         icon: Icons.account_balance_outlined,
         accent: _calmError,
         sign: '-',
