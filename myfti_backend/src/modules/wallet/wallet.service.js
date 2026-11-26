@@ -43,8 +43,8 @@ const topUp = async (userId, amount, pin) => {
     await notify(
       tx,
       userId,
-      "Top Up berhasil",
-      `Top Up ${formatRupiah(amount)} berhasil ditambahkan ke saldo myFTI.`
+      "Isi saldo berhasil",
+      `Isi saldo ${formatRupiah(amount)} berhasil ditambahkan ke saldo myFTI.`
     );
 
     return {

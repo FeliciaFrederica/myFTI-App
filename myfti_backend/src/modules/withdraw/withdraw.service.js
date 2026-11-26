@@ -240,8 +240,8 @@ const withdraw = async (
     await notify(
       tx,
       userId,
-      "Withdraw berhasil",
-      `Withdraw ${formatRupiah(amount)} ke ${targetBank.bankName} (${targetAccountNumber.slice(-4)}) berhasil.`
+      "Tarik saldo berhasil",
+      `Tarik saldo ${formatRupiah(amount)} ke ${targetBank.bankName} (${targetAccountNumber.slice(-4)}) berhasil.`
     );
 
     // Mengambil saldo terbaru

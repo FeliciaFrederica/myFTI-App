@@ -20,7 +20,7 @@ const withdraw = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Data withdraw tidak valid.",
+        message: "Data tarik saldo tidak valid.",
       });
     }
 
@@ -28,7 +28,7 @@ const withdraw = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Withdraw berhasil.",
+      message: "Tarik saldo berhasil.",
       data: result,
     });
   } catch (error) {
@@ -38,7 +38,7 @@ const withdraw = async (req, res) => {
       success: false,
       message: error.statusCode
         ? error.message
-        : "Gagal melakukan withdraw.",
+        : "Gagal melakukan tarik saldo.",
     });
   }
 };
