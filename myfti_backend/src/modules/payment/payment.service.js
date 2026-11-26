@@ -148,7 +148,7 @@ const createPayment = async (studentId, data) => {
             });
           }
 
-          // 1. Debit student only when the balance is sufficient.
+          // Debit student only when the balance is sufficient
           const debit = await tx.wallet.updateMany({
             where: {
               userId: studentId,
@@ -165,7 +165,7 @@ const createPayment = async (studentId, data) => {
             });
           }
 
-          // 2. Check merchant wallet balance limit.
+          // Check merchant wallet balance limit
           const currentMerchantWallet = await tx.wallet.findUnique({
             where: { userId: merchant.id },
           });
@@ -180,7 +180,7 @@ const createPayment = async (studentId, data) => {
             );
           }
 
-          // 3. Credit merchant.
+          // Credit merchant
           await tx.wallet.update({
             where: { userId: merchant.id },
             data: {
@@ -188,7 +188,7 @@ const createPayment = async (studentId, data) => {
             },
           });
 
-          // 4. Create paired transaction records.
+          // Create paired transaction records
           const groupId = crypto.randomUUID();
           const reference = `PAY-${crypto.randomUUID()}`;
 
@@ -199,7 +199,7 @@ const createPayment = async (studentId, data) => {
                 type: "PAYMENT",
                 amount,
                 description:
-                  description || `Payment to ${merchant.fullName}`,
+                  description || `Pembayaran ke ${merchant.fullName}`,
                 subcategory,
                 userId: studentId,
                 transferGroupId: groupId,
@@ -210,7 +210,7 @@ const createPayment = async (studentId, data) => {
                 type: "PAYMENT_IN",
                 amount,
                 description:
-                  description || `Payment from ${student.fullName}`,
+                  description || `Pembayaran dari ${student.fullName}`,
                 subcategory,
                 userId: merchant.id,
                 transferGroupId: groupId,
