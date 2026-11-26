@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myfti_app/src/core/widgets/top_notice.dart';
 
+import '../../notification/services/local_notification_service.dart';
 import '../../wallet/services/wallet_service.dart';
+import '../../transaction/pages/transaction_confirmation_page.dart';
+import '../../transaction/pages/transaction_success_page.dart';
 import '../../transaction/services/transaction_pin_flow.dart';
 import '../services/transfer_service.dart';
 
@@ -26,12 +29,9 @@ class _TransferPageState extends State<TransferPage> {
   final WalletService _walletService = WalletService();
 
   // Controller untuk input transfer
-  final TextEditingController _walletIdController =
-      TextEditingController();
-  final TextEditingController _amountController =
-      TextEditingController();
-  final TextEditingController _descriptionController =
-      TextEditingController();
+  final TextEditingController _walletIdController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
 
   // Data saldo dan penerima
   Map<String, dynamic>? _wallet;
@@ -255,10 +255,7 @@ class _TransferPageState extends State<TransferPage> {
       if (!mounted) return;
 
       setState(() {
-        _walletIdError = error.toString().replaceFirst(
-          'Exception: ',
-          '',
-        );
+        _walletIdError = error.toString().replaceFirst('Exception: ', '');
       });
     } finally {
       if (mounted) {
@@ -298,11 +295,7 @@ class _TransferPageState extends State<TransferPage> {
 
     // Memeriksa kecukupan saldo sebelum konfirmasi dan verifikasi PIN
     if (_amount > _balance) {
-      TopNotice.show(
-        context,
-        'Saldo kamu tidak mencukupi.',
-        success: false,
-      );
+      TopNotice.show(context, 'Saldo kamu tidak mencukupi.', success: false);
       return;
     }
 
@@ -311,98 +304,23 @@ class _TransferPageState extends State<TransferPage> {
       _amountError = null;
     });
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFFF3EEFC),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'Konfirmasi Transfer',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Anda akan mengirim saldo kepada:',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _recipient?['fullName']?.toString() ?? '-',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-              Text(
-                'ID Dompet: ${_recipient?['walletId'] ?? '-'}',
-              ),
-              const SizedBox(height: 16),
-              const Text('Nominal Transfer'),
-              const SizedBox(height: 4),
-              Text(
-                _formatRupiah(_amount),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: primaryPurple,
-                ),
-              ),
-            ],
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(dialogContext, true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryPurple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Konfirmasi',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text(
-                  'Batal',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+    // Tutup keyboard sebelum dialog mengambil alih layar pada perangkat kecil.
+    FocusScope.of(context).unfocus();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted) return;
+
+    final confirmed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => TransactionConfirmationPage(
+          title: 'Konfirmasi Transfer',
+          amount: _amount,
+          details: [
+            MapEntry('Penerima', _recipient?['fullName']?.toString() ?? '-'),
+            MapEntry('ID Dompet', _recipient?['walletId']?.toString() ?? '-'),
           ],
-        );
-      },
+          message: 'Pastikan informasi transfer sudah benar.',
+        ),
+      ),
     );
 
     if (confirmed == true && mounted) {
@@ -425,7 +343,7 @@ class _TransferPageState extends State<TransferPage> {
       if (!mounted || pin == null) return;
 
       // Mengirim data transfer beserta PIN ke backend
-      await _transferService.transfer(
+      final result = await _transferService.transfer(
         recipientWalletId: _walletIdController.text.trim(),
         amount: _amount,
         description: _descriptionController.text.trim(),
@@ -434,13 +352,31 @@ class _TransferPageState extends State<TransferPage> {
 
       if (!mounted) return;
 
-      Navigator.pop(context, true);
+      LocalNotificationService.checkNow();
 
-      TopNotice.show(
-        context,
-        'Transfer berhasil dilakukan!',
-        success: true,
+      final recipient = result['recipient'];
+      final transactions = result['transactions'];
+      final senderTransaction = transactions is Map
+          ? transactions['sender']
+          : null;
+
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => TransactionSuccessPage(
+            title: 'Transfer Berhasil',
+            amount: _amount,
+            recipient: recipient is Map
+                ? recipient['fullName']?.toString() ?? '-'
+                : _recipient?['fullName']?.toString() ?? '-',
+            reference: senderTransaction is Map
+                ? senderTransaction['reference']?.toString() ?? '-'
+                : result['transferGroupId']?.toString() ?? '-',
+          ),
+        ),
       );
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
 
@@ -470,10 +406,7 @@ class _TransferPageState extends State<TransferPage> {
       prefixIcon: prefixIcon,
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 16,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: borderColor),
@@ -484,10 +417,7 @@ class _TransferPageState extends State<TransferPage> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: primaryPurple,
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: primaryPurple, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -495,10 +425,7 @@ class _TransferPageState extends State<TransferPage> {
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: Colors.red,
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: Colors.red, width: 1.5),
       ),
     );
   }
@@ -511,10 +438,7 @@ class _TransferPageState extends State<TransferPage> {
       padding: const EdgeInsets.only(top: 7),
       child: Text(
         message,
-        style: const TextStyle(
-          color: Colors.red,
-          fontSize: 12,
-        ),
+        style: const TextStyle(color: Colors.red, fontSize: 12),
       ),
     );
   }
@@ -533,10 +457,7 @@ class _TransferPageState extends State<TransferPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Saldo Tersedia',
-            style: TextStyle(color: Colors.white70),
-          ),
+          const Text('Saldo Tersedia', style: TextStyle(color: Colors.white70)),
           const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -578,9 +499,7 @@ class _TransferPageState extends State<TransferPage> {
               ),
               if (hasError)
                 IconButton(
-                  onPressed: _isRefreshingWallet
-                      ? null
-                      : () => _loadWallet(),
+                  onPressed: _isRefreshingWallet ? null : () => _loadWallet(),
                   icon: _isRefreshingWallet
                       ? const SizedBox(
                           width: 20,
@@ -632,8 +551,7 @@ class _TransferPageState extends State<TransferPage> {
               style: TextStyle(
                 fontSize: 11,
                 color: isAtLimit ? Colors.red : Colors.grey,
-                fontWeight:
-                    isAtLimit ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: isAtLimit ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
@@ -647,38 +565,38 @@ class _TransferPageState extends State<TransferPage> {
           onChanged: _onDescriptionChanged,
 
           // Menyembunyikan counter bawaan Flutter
-          buildCounter: (
-            context, {
-            required int currentLength,
-            required bool isFocused,
-            int? maxLength,
-          }) {
-            return null;
-          },
+          buildCounter:
+              (
+                context, {
+                required int currentLength,
+                required bool isFocused,
+                int? maxLength,
+              }) {
+                return null;
+              },
 
-          decoration: _inputDecoration(
-            hintText: 'Tambahkan catatan transfer',
-          ).copyWith(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                color: isAtLimit ? Colors.red : borderColor,
+          decoration: _inputDecoration(hintText: 'Tambahkan catatan transfer')
+              .copyWith(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isAtLimit ? Colors.red : borderColor,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isAtLimit ? Colors.red : borderColor,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isAtLimit ? Colors.red : primaryPurple,
+                    width: 1.5,
+                  ),
+                ),
               ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                color: isAtLimit ? Colors.red : borderColor,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                color: isAtLimit ? Colors.red : primaryPurple,
-                width: 1.5,
-              ),
-            ),
-          ),
         ),
         _buildWarning(_descriptionError),
       ],
@@ -721,48 +639,46 @@ class _TransferPageState extends State<TransferPage> {
                       enabled: !_isTransferring,
                       textCapitalization: TextCapitalization.characters,
                       onChanged: _onWalletIdChanged,
-                      decoration: _inputDecoration(
-                        hintText: 'Masukkan ID Penerima',
-                        prefixIcon: const Icon(
-                          Icons.person_outline,
-                          color: primaryPurple,
-                        ),
-                      ).copyWith(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(
-                            color: _walletIdError != null
-                                ? Colors.red
-                                : borderColor,
+                      decoration:
+                          _inputDecoration(
+                            hintText: 'Masukkan ID Penerima',
+                            prefixIcon: const Icon(
+                              Icons.person_outline,
+                              color: primaryPurple,
+                            ),
+                          ).copyWith(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: _walletIdError != null
+                                    ? Colors.red
+                                    : borderColor,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: _walletIdError != null
+                                    ? Colors.red
+                                    : borderColor,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: _walletIdError != null
+                                    ? Colors.red
+                                    : primaryPurple,
+                                width: 1.5,
+                              ),
+                            ),
                           ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(
-                            color: _walletIdError != null
-                                ? Colors.red
-                                : borderColor,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(
-                            color: _walletIdError != null
-                                ? Colors.red
-                                : primaryPurple,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
                     ),
                     if (_walletIdError != null) ...[
                       const SizedBox(height: 6),
                       Text(
                         _walletIdError!,
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontSize: 12,
-                        ),
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
                       ),
                     ],
                   ],
@@ -815,10 +731,7 @@ class _TransferPageState extends State<TransferPage> {
                 children: [
                   const CircleAvatar(
                     backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.person,
-                      color: primaryPurple,
-                    ),
+                    child: Icon(Icons.person, color: primaryPurple),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -840,10 +753,7 @@ class _TransferPageState extends State<TransferPage> {
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                  ),
+                  const Icon(Icons.check_circle, color: Colors.green),
                 ],
               ),
             ),
@@ -865,64 +775,52 @@ class _TransferPageState extends State<TransferPage> {
             controller: _amountController,
             enabled: !_isTransferring,
             keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-            ],
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             onChanged: _onAmountChanged,
-            decoration: _inputDecoration(
-              hintText: 'Masukkan nominal transfer',
-            ).copyWith(
-              prefixIcon: const Padding(
-                padding: EdgeInsets.only(left: 14, right: 8),
-                child: Text(
-                  'Rp ',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+            decoration: _inputDecoration(hintText: 'Masukkan nominal transfer')
+                .copyWith(
+                  prefixIcon: const Padding(
+                    padding: EdgeInsets.only(left: 14, right: 8),
+                    child: Text(
+                      'Rp ',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  prefixIconConstraints: const BoxConstraints(
+                    minHeight: 0,
+                    minWidth: 0,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: _amountError != null ? Colors.red : borderColor,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: _amountError != null ? Colors.red : borderColor,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: _amountError != null ? Colors.red : primaryPurple,
+                      width: 1.5,
+                    ),
                   ),
                 ),
-              ),
-              prefixIconConstraints: const BoxConstraints(
-                minHeight: 0,
-                minWidth: 0,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(
-                  color: _amountError != null
-                      ? Colors.red
-                      : borderColor,
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(
-                  color: _amountError != null
-                      ? Colors.red
-                      : borderColor,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(
-                  color: _amountError != null
-                      ? Colors.red
-                      : primaryPurple,
-                  width: 1.5,
-                ),
-              ),
-            ),
           ),
 
           if (_amountError != null) ...[
             const SizedBox(height: 6),
             Text(
               _amountError!,
-              style: const TextStyle(
-                color: Colors.red,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.red, fontSize: 12),
             ),
           ],
 
@@ -975,9 +873,7 @@ class _TransferPageState extends State<TransferPage> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: _canContinueTransfer
-                  ? _showConfirmation
-                  : null,
+              onPressed: _canContinueTransfer ? _showConfirmation : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryPurple,
                 foregroundColor: Colors.white,
@@ -1019,10 +915,7 @@ class _TransferPageState extends State<TransferPage> {
       appBar: AppBar(
         title: const Text(
           'Transfer',
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         backgroundColor: backgroundColor,
         elevation: 0,
@@ -1031,9 +924,7 @@ class _TransferPageState extends State<TransferPage> {
       body: SafeArea(
         child: _isWalletLoading
             ? const Center(
-                child: CircularProgressIndicator(
-                  color: primaryPurple,
-                ),
+                child: CircularProgressIndicator(color: primaryPurple),
               )
             : _buildTransferForm(),
       ),

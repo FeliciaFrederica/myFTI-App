@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myfti_app/src/core/widgets/top_notice.dart';
 
+import '../../notification/services/local_notification_service.dart';
 import '../../wallet/services/wallet_service.dart';
+import '../../transaction/pages/transaction_confirmation_page.dart';
+import '../../transaction/pages/transaction_success_page.dart';
 import '../../transaction/services/transaction_pin_flow.dart';
 
 class TopUpPage extends StatefulWidget {
@@ -205,7 +208,7 @@ class _TopUpPageState extends State<TopUpPage> {
   }
 
   // Menampilkan konfirmasi isi saldo
-  void _showConfirmation() {
+  Future<void> _showConfirmation() async {
     if (!_canContinueTopUp) return;
 
     final amount = _selectedAmount ?? _amount;
@@ -228,89 +231,30 @@ class _TopUpPageState extends State<TopUpPage> {
       _amountError = null;
     });
 
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFFF3EEFC),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'Konfirmasi Isi Saldo',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-          content: Text.rich(
-            TextSpan(
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black87,
-                height: 1.5,
-              ),
-              children: [
-                const TextSpan(
-                  text: 'Anda akan menambahkan saldo sebesar ',
-                ),
-                TextSpan(
-                  text: _formatRupiah(amount),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: primaryPurple,
-                  ),
-                ),
-                const TextSpan(text: '.'),
-              ],
-            ),
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryPurple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.pop(dialogContext);
-                  _submitTopUp(amount);
-                },
-                child: const Text(
-                  'Konfirmasi',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text(
-                  'Batal',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+    FocusScope.of(context).unfocus();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted) return;
+
+    final confirmed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => TransactionConfirmationPage(
+          title: 'Konfirmasi Isi Saldo',
+          amount: amount,
+          details: [
+            MapEntry('Saldo saat ini', _formatRupiah(_balance)),
+            MapEntry(
+              'Saldo setelah isi saldo',
+              _formatRupiah(_balance + amount),
             ),
           ],
-        );
-      },
+          message: 'Pastikan nominal isi saldo sudah benar.',
+        ),
+      ),
     );
+
+    if (confirmed == true && mounted) {
+      await _submitTopUp(amount);
+    }
   }
 
   // Memproses top up menggunakan PIN transaksi
@@ -324,25 +268,33 @@ class _TopUpPageState extends State<TopUpPage> {
     });
 
     try {
-      await _walletService.topUp(amount, pin);
+      final result = await _walletService.topUp(amount, pin);
 
       if (!mounted) return;
 
-      TopNotice.show(
-        context,
-        'Isi Saldo ${_formatRupiah(amount)} berhasil!',
-        success: true,
+      LocalNotificationService.checkNow();
+
+      final transaction = result['transaction'];
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => TransactionSuccessPage(
+            title: 'Isi Saldo Berhasil',
+            amount: amount,
+            recipient: 'Saldo myFTI',
+            reference: transaction is Map
+                ? transaction['reference']?.toString() ?? '-'
+                : '-',
+            recipientLabel: 'Masuk ke',
+          ),
+        ),
       );
 
+      if (!mounted) return;
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
 
-      TopNotice.show(
-        context,
-        _getTopUpErrorMessage(error),
-        success: false,
-      );
+      TopNotice.show(context, _getTopUpErrorMessage(error), success: false);
     } finally {
       if (mounted) {
         setState(() {
@@ -372,10 +324,7 @@ class _TopUpPageState extends State<TopUpPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Saldo Tersedia',
-            style: TextStyle(color: Colors.white70),
-          ),
+          const Text('Saldo Tersedia', style: TextStyle(color: Colors.white70)),
           const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -419,9 +368,7 @@ class _TopUpPageState extends State<TopUpPage> {
               ),
               if (hasError)
                 IconButton(
-                  onPressed: _isRefreshingWallet
-                      ? null
-                      : () => _loadWallet(),
+                  onPressed: _isRefreshingWallet ? null : () => _loadWallet(),
                   icon: _isRefreshingWallet
                       ? const SizedBox(
                           width: 20,
@@ -487,18 +434,14 @@ class _TopUpPageState extends State<TopUpPage> {
               final isSelected = _selectedAmount == amount;
 
               return OutlinedButton(
-                onPressed: _isLoading
-                    ? null
-                    : () => _selectAmount(amount),
+                onPressed: _isLoading ? null : () => _selectAmount(amount),
                 style: OutlinedButton.styleFrom(
                   backgroundColor: isSelected
                       ? const Color(0xFFF3EEFC)
                       : Colors.white,
                   foregroundColor: primaryPurple,
                   side: BorderSide(
-                    color: isSelected
-                        ? primaryPurple
-                        : const Color(0xFFD1C4E9),
+                    color: isSelected ? primaryPurple : const Color(0xFFD1C4E9),
                     width: isSelected ? 1.5 : 1,
                   ),
                   shape: RoundedRectangleBorder(
@@ -507,9 +450,7 @@ class _TopUpPageState extends State<TopUpPage> {
                 ),
                 child: Text(
                   _formatRupiah(amount),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               );
             },
@@ -532,9 +473,7 @@ class _TopUpPageState extends State<TopUpPage> {
             controller: _amountController,
             enabled: !_isLoading,
             keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-            ],
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             onChanged: _onCustomAmountChanged,
             decoration: InputDecoration(
               prefixIcon: const Padding(
@@ -558,35 +497,23 @@ class _TopUpPageState extends State<TopUpPage> {
               fillColor: Colors.white,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFFD1C4E9),
-                ),
+                borderSide: const BorderSide(color: Color(0xFFD1C4E9)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFFD1C4E9),
-                ),
+                borderSide: const BorderSide(color: Color(0xFFD1C4E9)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: primaryPurple,
-                  width: 1.5,
-                ),
+                borderSide: const BorderSide(color: primaryPurple, width: 1.5),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Colors.red,
-                ),
+                borderSide: const BorderSide(color: Colors.red),
               ),
               focusedErrorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Colors.red,
-                  width: 1.5,
-                ),
+                borderSide: const BorderSide(color: Colors.red, width: 1.5),
               ),
             ),
           ),
@@ -623,14 +550,6 @@ class _TopUpPageState extends State<TopUpPage> {
                         color: primaryPurple,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Biaya Admin'),
-                    Text('Rp 0'),
                   ],
                 ),
               ],
@@ -686,10 +605,7 @@ class _TopUpPageState extends State<TopUpPage> {
       appBar: AppBar(
         title: const Text(
           'Isi Saldo',
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         backgroundColor: backgroundColor,
         elevation: 0,
@@ -698,9 +614,7 @@ class _TopUpPageState extends State<TopUpPage> {
       body: SafeArea(
         child: _isWalletLoading
             ? const Center(
-                child: CircularProgressIndicator(
-                  color: primaryPurple,
-                ),
+                child: CircularProgressIndicator(color: primaryPurple),
               )
             : _buildTopUpForm(),
       ),

@@ -4,6 +4,8 @@ import 'package:myfti_app/src/core/widgets/top_notice.dart';
 
 import '../../wallet/services/wallet_service.dart';
 import '../../transaction/services/transaction_pin_flow.dart';
+import '../../transaction/pages/transaction_confirmation_page.dart';
+import '../../transaction/pages/transaction_success_page.dart';
 import '../../notification/services/local_notification_service.dart';
 import '../services/withdraw_service.dart';
 
@@ -33,8 +35,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
   final TextEditingController _accountNumberController =
       TextEditingController();
-  final TextEditingController _amountController =
-      TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
 
   Map<String, dynamic>? _wallet;
   List<Map<String, dynamic>> _savedAccounts = [];
@@ -86,9 +87,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
   String _maskAccountNumber(String accountNumber) {
     if (accountNumber.length <= 4) return accountNumber;
 
-    final lastDigits = accountNumber.substring(
-      accountNumber.length - 4,
-    );
+    final lastDigits = accountNumber.substring(accountNumber.length - 4);
 
     return '${'*' * (accountNumber.length - 4)}$lastDigits';
   }
@@ -196,11 +195,9 @@ class _WithdrawPageState extends State<WithdrawPage> {
           if (_selectedBankAccountId == null ||
               !accounts.any(
                 (account) =>
-                    account['id']?.toString() ==
-                    _selectedBankAccountId,
+                    account['id']?.toString() == _selectedBankAccountId,
               )) {
-            _selectedBankAccountId =
-                accounts.first['id']?.toString();
+            _selectedBankAccountId = accounts.first['id']?.toString();
           }
 
           _useSavedAccount = true;
@@ -232,8 +229,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
         if (value.isEmpty) {
           _accountError = null;
         } else if (!RegExp(r'^\d{10,16}$').hasMatch(value)) {
-          _accountError =
-              'Nomor rekening harus terdiri dari 10–16 digit.';
+          _accountError = 'Nomor rekening harus terdiri dari 10–16 digit.';
         } else {
           _accountError = null;
         }
@@ -279,26 +275,20 @@ class _WithdrawPageState extends State<WithdrawPage> {
       if (_useSavedAccount) {
         if (_selectedBankAccountId == null ||
             !_savedAccounts.any(
-              (account) =>
-                  account['id']?.toString() ==
-                  _selectedBankAccountId,
+              (account) => account['id']?.toString() == _selectedBankAccountId,
             )) {
-          _savedAccountError =
-              'Pilih rekening tujuan terlebih dahulu.';
+          _savedAccountError = 'Pilih rekening tujuan terlebih dahulu.';
           isValid = false;
         }
       } else {
-        final accountNumber =
-            _accountNumberController.text.trim();
+        final accountNumber = _accountNumberController.text.trim();
 
         if (_selectedBankCode == null ||
             !_banks.containsKey(_selectedBankCode)) {
           _accountError = 'Pilih bank tujuan terlebih dahulu.';
           isValid = false;
-        } else if (!RegExp(r'^\d{10,16}$')
-            .hasMatch(accountNumber)) {
-          _accountError =
-              'Nomor rekening harus terdiri dari 10–16 digit.';
+        } else if (!RegExp(r'^\d{10,16}$').hasMatch(accountNumber)) {
+          _accountError = 'Nomor rekening harus terdiri dari 10–16 digit.';
           isValid = false;
         }
       }
@@ -319,8 +309,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
   Map<String, String> _getDestination() {
     if (_useSavedAccount) {
       final account = _savedAccounts.firstWhere(
-        (item) =>
-            item['id']?.toString() == _selectedBankAccountId,
+        (item) => item['id']?.toString() == _selectedBankAccountId,
       );
 
       final bankCode = account['bankCode'].toString();
@@ -346,109 +335,33 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
     // Memeriksa kecukupan saldo sebelum konfirmasi dan verifikasi PIN
     if (_amount > _balance) {
-      TopNotice.show(
-        context,
-        'Saldo kamu tidak mencukupi.',
-        success: false,
-      );
+      TopNotice.show(context, 'Saldo kamu tidak mencukupi.', success: false);
       return;
     }
 
     final destination = _getDestination();
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFFF3EEFC),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'Konfirmasi Tarik Saldo',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: textColor,
+    // Tutup keyboard sebelum dialog mengambil alih layar pada perangkat kecil.
+    FocusScope.of(context).unfocus();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted) return;
+
+    final confirmed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => TransactionConfirmationPage(
+          title: 'Konfirmasi Tarik Saldo',
+          amount: _amount,
+          details: [
+            MapEntry('Bank Tujuan', destination['bankName']!),
+            MapEntry(
+              'Nomor Rekening',
+              _maskAccountNumber(destination['accountNumber']!),
             ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Pastikan informasi penarikan sudah benar.',
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              _confirmationRow(
-                'Bank Tujuan',
-                destination['bankName']!,
-              ),
-              const SizedBox(height: 10),
-              _confirmationRow(
-                'Nomor Rekening',
-                _maskAccountNumber(
-                  destination['accountNumber']!,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _confirmationRow(
-                'Nominal Withdraw',
-                _formatRupiah(_amount),
-              ),
-              const SizedBox(height: 10),
-              _confirmationRow(
-                'Sisa Saldo',
-                _formatRupiah(_balance - _amount),
-              ),
-            ],
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogContext, true);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryPurple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Konfirmasi',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () {
-                  Navigator.pop(dialogContext, false);
-                },
-                child: const Text(
-                  'Batal',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+            MapEntry('Sisa Saldo', _formatRupiah(_balance - _amount)),
           ],
-        );
-      },
+          message: 'Pastikan informasi penarikan sudah benar.',
+        ),
+      ),
     );
 
     if (confirmed == true && mounted) {
@@ -461,10 +374,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(color: Colors.grey),
-          ),
+          child: Text(label, style: const TextStyle(color: Colors.grey)),
         ),
         const SizedBox(width: 12),
         Flexible(
@@ -494,33 +404,51 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
       if (!mounted || pin == null) return;
 
-      if (_useSavedAccount) {
-        await _withdrawService.withdraw(
-          amount: _amount,
-          pin: pin,
-          bankAccountId: _selectedBankAccountId,
-        );
-      } else {
-        await _withdrawService.withdraw(
-          amount: _amount,
-          pin: pin,
-          bankCode: _selectedBankCode,
-          accountNumber: _accountNumberController.text.trim(),
-          saveAccount: _saveAccount,
-        );
-      }
+      final result = _useSavedAccount
+          ? await _withdrawService.withdraw(
+              amount: _amount,
+              pin: pin,
+              bankAccountId: _selectedBankAccountId,
+            )
+          : await _withdrawService.withdraw(
+              amount: _amount,
+              pin: pin,
+              bankCode: _selectedBankCode,
+              accountNumber: _accountNumberController.text.trim(),
+              saveAccount: _saveAccount,
+            );
 
       if (!mounted) return;
 
       LocalNotificationService.checkNow();
 
-      Navigator.pop(context, true);
+      final destination = result['destination'];
+      final transaction = result['transaction'];
+      final accountNumber = destination is Map
+          ? destination['accountNumber']?.toString() ?? ''
+          : '';
+      final maskedAccount = accountNumber.length >= 4
+          ? '•••• ${accountNumber.substring(accountNumber.length - 4)}'
+          : accountNumber;
 
-      TopNotice.show(
-        context,
-        'Penarikan ${_formatRupiah(_amount)} berhasil!',
-        success: true,
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => TransactionSuccessPage(
+            title: 'Penarikan Berhasil',
+            amount: _amount,
+            recipient: destination is Map
+                ? '${destination['bankName'] ?? 'Bank'} $maskedAccount'.trim()
+                : 'Rekening bank',
+            reference: transaction is Map
+                ? transaction['reference']?.toString() ?? '-'
+                : '-',
+            recipientLabel: 'Tujuan',
+          ),
+        ),
       );
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
 
@@ -546,10 +474,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
       padding: const EdgeInsets.only(top: 7),
       child: Text(
         message,
-        style: const TextStyle(
-          color: Colors.red,
-          fontSize: 12,
-        ),
+        style: const TextStyle(color: Colors.red, fontSize: 12),
       ),
     );
   }
@@ -578,10 +503,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
       prefixIcon: prefixIcon,
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 15,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: borderColor),
@@ -592,10 +514,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: primaryPurple,
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: primaryPurple, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -603,10 +522,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: Colors.red,
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: Colors.red, width: 1.5),
       ),
     );
   }
@@ -625,10 +541,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Saldo Tersedia',
-            style: TextStyle(color: Colors.white70),
-          ),
+          const Text('Saldo Tersedia', style: TextStyle(color: Colors.white70)),
           const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -672,9 +585,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
               ),
               if (hasError)
                 IconButton(
-                  onPressed: _isRefreshingWallet
-                      ? null
-                      : () => _loadData(),
+                  onPressed: _isRefreshingWallet ? null : () => _loadData(),
                   icon: _isRefreshingWallet
                       ? const SizedBox(
                           width: 20,
@@ -710,10 +621,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
         ..._savedAccounts.map((account) {
           final accountId = account['id'].toString();
           final bankCode = account['bankCode'].toString();
-          final accountNumber =
-              account['accountNumber'].toString();
-          final isSelected =
-              accountId == _selectedBankAccountId;
+          final accountNumber = account['accountNumber'].toString();
+          final isSelected = accountId == _selectedBankAccountId;
 
           return Container(
             margin: const EdgeInsets.only(bottom: 10),
@@ -808,9 +717,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
               Icons.credit_card_outlined,
               color: primaryPurple,
             ),
-          ).copyWith(
-            counterText: '',
-          ),
+          ).copyWith(counterText: ''),
         ),
         _buildWarning(_accountError),
         const SizedBox(height: 8),
@@ -828,10 +735,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
           controlAffinity: ListTileControlAffinity.leading,
           title: const Text(
             'Simpan rekening untuk transaksi berikutnya',
-            style: TextStyle(
-              fontSize: 13,
-              color: textColor,
-            ),
+            style: TextStyle(fontSize: 13, color: textColor),
           ),
         ),
       ],
@@ -851,9 +755,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: !_useSavedAccount
-                    ? borderColor
-                    : primaryPurple,
+                color: !_useSavedAccount ? borderColor : primaryPurple,
               ),
             ),
             child: RadioListTile<bool>(
@@ -869,10 +771,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
                     },
               title: const Text(
                 'Rekening Tersimpan',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: textColor,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w600, color: textColor),
               ),
               subtitle: const Text(
                 'Gunakan rekening yang pernah disimpan',
@@ -886,9 +785,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: _useSavedAccount
-                    ? borderColor
-                    : primaryPurple,
+                color: _useSavedAccount ? borderColor : primaryPurple,
               ),
             ),
             child: RadioListTile<bool>(
@@ -904,10 +801,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
                     },
               title: const Text(
                 'Rekening Baru',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: textColor,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w600, color: textColor),
               ),
               subtitle: const Text(
                 'Gunakan rekening bank lainnya',
@@ -923,11 +817,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
         ] else ...[
           const Text(
             'Belum ada rekening tersimpan. Tambahkan rekening baru untuk melakukan penarikan.',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.black54,
-              height: 1.5,
-            ),
+            style: TextStyle(fontSize: 13, color: Colors.black54, height: 1.5),
           ),
           const SizedBox(height: 16),
           _buildNewAccountForm(),
@@ -947,54 +837,45 @@ class _WithdrawPageState extends State<WithdrawPage> {
           controller: _amountController,
           enabled: !_isWithdrawing,
           keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-          ],
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           onChanged: _onAmountChanged,
-          decoration: _inputDecoration(
-            hint: 'Masukkan nominal penarikan',
-          ).copyWith(
-            prefixIcon: const Padding(
-              padding: EdgeInsets.only(left: 14, right: 8),
-              child: Text(
-                'Rp ',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+          decoration: _inputDecoration(hint: 'Masukkan nominal penarikan')
+              .copyWith(
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.only(left: 14, right: 8),
+                  child: Text(
+                    'Rp ',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minHeight: 0,
+                  minWidth: 0,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: _amountError != null ? Colors.red : borderColor,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: _amountError != null ? Colors.red : borderColor,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: _amountError != null ? Colors.red : primaryPurple,
+                    width: 1.5,
+                  ),
                 ),
               ),
-            ),
-            prefixIconConstraints: const BoxConstraints(
-              minHeight: 0,
-              minWidth: 0,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                color: _amountError != null
-                    ? Colors.red
-                    : borderColor,
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                color: _amountError != null
-                    ? Colors.red
-                    : borderColor,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                color: _amountError != null
-                    ? Colors.red
-                    : primaryPurple,
-                width: 1.5,
-              ),
-            ),
-          ),
         ),
         _buildWarning(_amountError),
       ],
@@ -1017,10 +898,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
         children: [
           const Text(
             'Ringkasan Penarikan',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
           ),
           const SizedBox(height: 14),
           Row(
@@ -1036,14 +914,6 @@ class _WithdrawPageState extends State<WithdrawPage> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Biaya Admin'),
-              Text('Rp 0'),
-            ],
-          ),
           const Divider(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1053,9 +923,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               Text(
-                _formatRupiah(
-                  remainingBalance < 0 ? 0 : remainingBalance,
-                ),
+                _formatRupiah(remainingBalance < 0 ? 0 : remainingBalance),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: textColor,
@@ -1091,9 +959,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: _canContinueWithdraw
-                  ? _showConfirmation
-                  : null,
+              onPressed: _canContinueWithdraw ? _showConfirmation : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryPurple,
                 foregroundColor: Colors.white,
@@ -1135,24 +1001,15 @@ class _WithdrawPageState extends State<WithdrawPage> {
       appBar: AppBar(
         title: const Text(
           'Tarik Saldo',
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         backgroundColor: backgroundColor,
         elevation: 0,
         iconTheme: const IconThemeData(color: textColor),
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: primaryPurple,
-              ),
-            )
-          : SafeArea(
-              child: _buildWithdrawForm(),
-            ),
+          ? const Center(child: CircularProgressIndicator(color: primaryPurple))
+          : SafeArea(child: _buildWithdrawForm()),
     );
   }
 }
