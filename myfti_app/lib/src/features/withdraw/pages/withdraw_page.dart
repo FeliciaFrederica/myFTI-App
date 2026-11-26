@@ -369,28 +369,6 @@ class _WithdrawPageState extends State<WithdrawPage> {
     }
   }
 
-  Widget _confirmationRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Text(label, style: const TextStyle(color: Colors.grey)),
-        ),
-        const SizedBox(width: 12),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   // Memproses withdraw menggunakan PIN transaksi
   Future<void> _submitWithdraw() async {
     if (!_canContinueWithdraw) return;
@@ -674,7 +652,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
         _buildSectionTitle('Bank Tujuan'),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          value: _selectedBankCode,
+          initialValue: _selectedBankCode,
           isExpanded: true,
           decoration: _inputDecoration(
             hint: 'Pilih bank tujuan',
