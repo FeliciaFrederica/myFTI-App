@@ -80,6 +80,46 @@ class NotificationService {
     }
   }
 
+  static Future<void> delete(String id) async {
+    final token = await SessionService.getToken();
+
+    final res = await ApiClient.delete(
+      '/notifications/$id',
+      token: token,
+    ).timeout(const Duration(seconds: 15));
+
+    if (res.statusCode == 401) {
+      await SessionService.clear();
+      throw Exception('Sesi berakhir, silakan login lagi');
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception(
+        _message(_decode(res), 'Gagal menghapus notifikasi'),
+      );
+    }
+  }
+
+  static Future<void> deleteAll() async {
+    final token = await SessionService.getToken();
+
+    final res = await ApiClient.delete(
+      '/notifications',
+      token: token,
+    ).timeout(const Duration(seconds: 15));
+
+    if (res.statusCode == 401) {
+      await SessionService.clear();
+      throw Exception('Sesi berakhir, silakan login lagi');
+    }
+
+    if (res.statusCode != 200) {
+      throw Exception(
+        _message(_decode(res), 'Gagal menghapus semua notifikasi'),
+      );
+    }
+  }
+
   static Map<String, dynamic> _decode(http.Response res) {
     try {
       final decoded = jsonDecode(res.body);
