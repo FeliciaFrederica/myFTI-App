@@ -22,6 +22,7 @@ class _PaymentPageState extends State<PaymentPage> {
   static const Color borderColor = Color(0xFFD1C4E9);
   static const Color cardColor = Color(0xFFEDE7F6);
 
+  static const int minPayment = 10000;
   static const int maxNotesLength = 150;
 
   static const Map<String, String> _categoryValues = {
@@ -247,8 +248,8 @@ class _PaymentPageState extends State<PaymentPage> {
     setState(() {
       if (value.trim().isEmpty) {
         _amountError = null;
-      } else if (amount <= 0) {
-        _amountError = 'Nominal harus lebih dari Rp 0.';
+      } else if (amount < minPayment) {
+        _amountError = 'Minimal pembayaran adalah Rp10.000.';
       } else {
         _amountError = null;
       }
@@ -295,6 +296,9 @@ class _PaymentPageState extends State<PaymentPage> {
       if (_amount <= 0) {
         _amountError = 'Masukkan nominal pembayaran.';
         isValid = false;
+      } else if (_amount < minPayment) {
+        _amountError = 'Minimal pembayaran adalah Rp10.000.';
+        isValid = false;
       }
 
       if (_notesController.text.length >= maxNotesLength) {
@@ -316,6 +320,7 @@ class _PaymentPageState extends State<PaymentPage> {
     if (!_canContinuePayment) return;
     if (!_validateForm()) return;
 
+    // Memeriksa kecukupan saldo sebelum konfirmasi dan PIN
     if (_amount > _balance) {
       TopNotice.show(
         context,
@@ -508,6 +513,22 @@ class _PaymentPageState extends State<PaymentPage> {
       return;
     }
 
+    // Memastikan nominal memenuhi batas minimum sebelum PIN
+    if (_amount <= 0) {
+      setState(() {
+        _amountError = 'Masukkan nominal pembayaran.';
+      });
+      return;
+    }
+
+    if (_amount < minPayment) {
+      setState(() {
+        _amountError = 'Minimal pembayaran adalah Rp10.000.';
+      });
+      return;
+    }
+
+    // Memeriksa kecukupan saldo sebelum verifikasi PIN
     if (_amount > _balance) {
       TopNotice.show(
         context,
@@ -599,26 +620,18 @@ class _PaymentPageState extends State<PaymentPage> {
     }
   }
 
-  // Menampilkan pesan peringatan input
+  // Menampilkan pesan peringatan input, sejajar dari kiri
   Widget _buildWarning(String? message) {
     if (message == null) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.only(top: 7),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(
-                color: Colors.red,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ],
+      child: Text(
+        message,
+        style: const TextStyle(
+          color: Colors.red,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -877,6 +890,8 @@ class _PaymentPageState extends State<PaymentPage> {
   // Kolom catatan pembayaran
   Widget _buildNotesField() {
     final hasNotesError = _notesError != null;
+    final currentLength = _notesController.text.length;
+    final isAtLimit = currentLength >= maxNotesLength;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -887,10 +902,12 @@ class _PaymentPageState extends State<PaymentPage> {
           children: [
             _buildSectionTitle('Catatan (Opsional)'),
             Text(
-              '${_notesController.text.length}/$maxNotesLength',
+              '$currentLength/$maxNotesLength',
               style: TextStyle(
                 fontSize: 11,
                 color: hasNotesError ? Colors.red : Colors.grey,
+                fontWeight:
+                    isAtLimit ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
