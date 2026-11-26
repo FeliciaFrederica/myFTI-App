@@ -7,7 +7,16 @@ const authenticate = require("../../middlewares/auth.middleware");
 // Daftar notifikasi milik user
 router.get("/", authenticate, notificationController.listNotifications);
 
+// Tandai semua notifikasi sudah dibaca
+router.put("/read-all", authenticate, notificationController.markAllAsRead);
+
 // Tandai satu notifikasi sudah dibaca
 router.put("/:id/read", authenticate, notificationController.markAsRead);
+
+// Hapus semua notifikasi milik user
+router.delete("/", authenticate, notificationController.deleteAllNotifications);
+
+// Hapus satu notifikasi milik user
+router.delete("/:id", authenticate, notificationController.deleteNotification);
 
 module.exports = router;

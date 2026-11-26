@@ -79,17 +79,23 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
           'Detail Transaksi',
           style: TextStyle(
             color: AppColors.text,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.text),
       ),
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: _load,
-        child: _buildBody(),
+      body: SafeArea(
+        top: false,
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: _load,
+          child: _buildBody(),
+        ),
       ),
     );
   }

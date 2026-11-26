@@ -35,4 +35,55 @@ const markAsRead = async (req, res, next) => {
   }
 };
 
-module.exports = { listNotifications, markAsRead };
+const markAllAsRead = async (req, res, next) => {
+  try {
+    const data = await notificationService.markAllAsRead(req.user.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Semua notifikasi ditandai sudah dibaca.",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteNotification = async (req, res, next) => {
+  try {
+    const data = await notificationService.deleteNotification(
+      req.user.id,
+      req.params.id
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Notifikasi berhasil dihapus.",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteAllNotifications = async (req, res, next) => {
+  try {
+    const data = await notificationService.deleteAllNotifications(req.user.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Semua notifikasi berhasil dihapus.",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  listNotifications,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+  deleteAllNotifications,
+};

@@ -31,6 +31,7 @@ class _NotificationPageState extends State<NotificationPage> {
 
   bool _loading = true;
   bool _markingAll = false;
+  bool _deletingAll = false;
   bool _onlyUnread = false;
   String? _error;
   List<AppNotification> _items = const [];
@@ -71,9 +72,9 @@ class _NotificationPageState extends State<NotificationPage> {
   _NotifVisual _visualFor(AppNotification item) {
     final lower = '${item.title} ${item.message}'.toLowerCase();
 
-    if (lower.contains('top up')) {
+    if (lower.contains('top up') || lower.contains('isi saldo')) {
       return const _NotifVisual(
-        badge: 'TOP UP',
+        badge: 'ISI SALDO',
         icon: Icons.add_circle_outline_rounded,
         accent: AppColors.success,
         sign: '+',
@@ -87,9 +88,9 @@ class _NotificationPageState extends State<NotificationPage> {
         sign: '+',
       );
     }
-    if (lower.contains('withdraw')) {
+    if (lower.contains('withdraw') || lower.contains('tarik saldo')) {
       return const _NotifVisual(
-        badge: 'WITHDRAW',
+        badge: 'TARIK SALDO',
         icon: Icons.account_balance_outlined,
         accent: _calmError,
         sign: '-',
@@ -270,26 +271,55 @@ class _NotificationPageState extends State<NotificationPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(sheetContext),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                Row(
+                  children: [
+                    SizedBox(
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                          _deleteItem(item);
+                        },
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 18,
+                        ),
+                        label: const Text('Hapus'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _calmError,
+                          side: BorderSide(
+                            color: _calmError.withValues(alpha: 0.45),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
                       ),
                     ),
-                    child: const Text(
-                      'Tutup',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(sheetContext),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'Tutup',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -349,9 +379,7 @@ class _NotificationPageState extends State<NotificationPage> {
     });
 
     try {
-      await Future.wait(
-        unreadItems.map((n) => NotificationService.markAsRead(n.id)),
-      );
+      await NotificationService.markAllAsRead();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -365,41 +393,188 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
+  Future<void> _deleteItem(AppNotification item) async {
+    final previous = _items;
+
+    // Optimistis: langsung hilangkan dari daftar
+    setState(() {
+      _items = _items.where((n) => n.id != item.id).toList();
+    });
+
+    try {
+      await NotificationService.delete(item.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Notifikasi dihapus'),
+          backgroundColor: AppColors.primary,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _items = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: _calmError,
+        ),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteAll() async {
+    if (_items.isEmpty || _deletingAll) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          'Hapus Semua Notifikasi?',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.text,
+          ),
+        ),
+        content: const Text(
+          'Semua notifikasi akan dihapus permanen dan tidak bisa dikembalikan.',
+          style: TextStyle(color: AppColors.text),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _calmError,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Hapus Semua'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final previous = _items;
+    setState(() {
+      _deletingAll = true;
+      _items = const [];
+    });
+
+    try {
+      await NotificationService.deleteAll();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Semua notifikasi berhasil dihapus'),
+          backgroundColor: AppColors.primary,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _items = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: _calmError,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _deletingAll = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Notification',
+          'Notifikasi',
           style: TextStyle(
             color: AppColors.text,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.text),
         actions: [
-          if (!_loading && _unreadCount > 0)
-            TextButton(
-              onPressed: _markingAll ? null : _markAllAsRead,
-              child: const Text(
-                'Tandai semua',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+          if (!_loading && _items.isNotEmpty)
+            PopupMenuButton<String>(
+              icon: const Icon(
+                Icons.more_vert_rounded,
+                color: AppColors.text,
               ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              onSelected: (value) {
+                if (value == 'read_all') {
+                  _markAllAsRead();
+                } else if (value == 'delete_all') {
+                  _confirmDeleteAll();
+                }
+              },
+              itemBuilder: (context) => [
+                if (_unreadCount > 0)
+                  const PopupMenuItem(
+                    value: 'read_all',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.done_all_rounded,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                        SizedBox(width: 10),
+                        Text('Tandai semua dibaca'),
+                      ],
+                    ),
+                  ),
+                const PopupMenuItem(
+                  value: 'delete_all',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.delete_sweep_outlined,
+                        size: 18,
+                        color: _calmError,
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Hapus semua',
+                        style: TextStyle(color: _calmError),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           const SizedBox(width: 4),
         ],
       ),
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: _load,
-        child: _buildBody(),
+      body: SafeArea(
+        top: false,
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: _load,
+          child: _buildBody(),
+        ),
       ),
     );
   }
@@ -587,115 +762,137 @@ class _NotificationPageState extends State<NotificationPage> {
         ? visual.accent.withValues(alpha: 0.12)
         : AppColors.background;
 
-    return Material(
-      color: unread ? Colors.white : Colors.white.withValues(alpha: 0.72),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _openNotification(item),
+    return Dismissible(
+      key: ValueKey(item.id),
+      direction: DismissDirection.endToStart,
+      onDismissed: (_) => _deleteItem(item),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 18),
         child: Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: unread ? _borderColor : AppColors.card,
-            ),
+          width: 46,
+          height: 46,
+          decoration: const BoxDecoration(
+            color: _calmError,
+            shape: BoxShape.circle,
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: iconBg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  visual.icon,
-                  color: iconColor,
-                  size: 21,
-                ),
+          child: const Icon(
+            Icons.delete_outline_rounded,
+            color: Colors.white,
+            size: 22,
+          ),
+        ),
+      ),
+      child: Material(
+        color: unread ? Colors.white : Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _openNotification(item),
+          child: Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: unread ? _borderColor : AppColors.card,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight:
-                                  unread ? FontWeight.bold : FontWeight.w600,
-                              color: unread
-                                  ? AppColors.text
-                                  : Colors.grey.shade700,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    visual.icon,
+                    color: iconColor,
+                    size: 21,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.title,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight:
+                                    unread ? FontWeight.bold : FontWeight.w600,
+                                color: unread
+                                    ? AppColors.text
+                                    : Colors.grey.shade700,
+                              ),
                             ),
                           ),
-                        ),
-                        if (unread)
-                          Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppColors.primary,
-                              shape: BoxShape.circle,
+                          if (unread)
+                            Container(
+                              margin: const EdgeInsets.only(left: 8),
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.message,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        height: 1.35,
-                        color: unread ? AppColors.text : Colors.grey,
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: unread
-                                ? visual.accent.withValues(alpha: 0.10)
-                                : AppColors.background,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            visual.badge,
-                            style: TextStyle(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.bold,
-                              color: unread ? visual.accent : Colors.grey,
+                      const SizedBox(height: 4),
+                      Text(
+                        item.message,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.35,
+                          color: unread ? AppColors.text : Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: unread
+                                  ? visual.accent.withValues(alpha: 0.10)
+                                  : AppColors.background,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              visual.badge,
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: unread ? visual.accent : Colors.grey,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _formatDate(item.createdAt),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey,
+                          const SizedBox(width: 8),
+                          Text(
+                            _formatDate(item.createdAt),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

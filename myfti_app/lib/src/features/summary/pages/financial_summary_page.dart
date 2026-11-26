@@ -424,20 +424,26 @@ class _FinancialSummaryPageState extends State<FinancialSummaryPage> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Financial Summary',
+          'Ringkasan Keuangan',
           style: TextStyle(
             color: AppColors.text,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.text),
       ),
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: _load,
-        child: _buildBody(),
+      body: SafeArea(
+        top: false,
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: _load,
+          child: _buildBody(),
+        ),
       ),
     );
   }
@@ -466,7 +472,7 @@ class _FinancialSummaryPageState extends State<FinancialSummaryPage> {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 44),
       children: [
         _buildTopFilterBar(summary),
         const SizedBox(height: 16),
