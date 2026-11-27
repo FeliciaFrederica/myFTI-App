@@ -31,14 +31,6 @@ const getTransactions = async (req, res) => {
       });
     }
 
-    const result = await transactionService.getTransactions(userId, {
-      limit,
-      cursor,
-      sort,
-      from,
-      to,
-    });
-
     const from = req.query.from ? new Date(req.query.from) : null;
     const to = req.query.to ? new Date(req.query.to) : null;
 
@@ -53,6 +45,14 @@ const getTransactions = async (req, res) => {
       });
     }
 
+    const result = await transactionService.getTransactions(userId, {
+      limit,
+      cursor,
+      sort,
+      from,
+      to,
+    });
+    
     return res.status(200).json({
       success: true,
       message: "Riwayat transaksi berhasil diambil.",
