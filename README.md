@@ -61,7 +61,7 @@ Make sure you have installed:
 Navigate to the backend directory:
    
    ```bash
-   cd myfti-backend
+   cd myfti_backend
    ```
 
 Install dependencies:
@@ -119,7 +119,7 @@ Keep the backend server running while using the application.
 Open another terminal and navigate to the Flutter application directory:
 
    ```bash
-   cd myfti-app
+   cd myfti_app
    ```
 
 Install Flutter dependencies:
