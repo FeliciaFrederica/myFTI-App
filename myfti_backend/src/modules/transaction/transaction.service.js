@@ -3,11 +3,23 @@ const { getMerchantDateRange } = require("../summary/merchant-dashboard.service"
 
 const getTransactions = async (
   userId,
-  { limit = 10, cursor = null, sort = "desc" } = {}
+  { limit = 10, cursor = null, sort = "desc", from = null, to = null } = {}
 ) => {
+  const where = {
+    userId,
+    ...(from || to
+      ? {
+          createdAt: {
+            ...(from && { gte: from }),
+            ...(to && { lte: to }),
+          },
+        }
+      : {}),
+  };
+
   if (cursor) {
     const cursorTransaction = await prisma.transaction.findFirst({
-      where: { id: cursor, userId },
+      where: { id: cursor, ...where },
       select: { id: true },
     });
 
@@ -19,12 +31,15 @@ const getTransactions = async (
   }
 
   const transactions = await prisma.transaction.findMany({
-    where: { userId },
+    where,
     orderBy: [
       { createdAt: sort === "asc" ? "asc" : "desc" },
       { id: sort === "asc" ? "asc" : "desc" },
     ],
-    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
     take: limit + 1,
     select: {
       id: true,

@@ -256,7 +256,7 @@ class _PaymentPageState extends State<PaymentPage> {
   // Memeriksa panjang catatan pembayaran
   void _onNotesChanged(String value) {
     setState(() {
-      _notesError = value.length >= maxNotesLength
+      _notesError = value.length > maxNotesLength
           ? 'Catatan sudah mencapai batas maksimal 150 karakter.'
           : null;
     });
@@ -293,7 +293,7 @@ class _PaymentPageState extends State<PaymentPage> {
         isValid = false;
       }
 
-      if (_notesController.text.length >= maxNotesLength) {
+      if (_notesController.text.length > maxNotesLength) {
         _notesError = 'Catatan sudah mencapai batas maksimal 150 karakter.';
         isValid = false;
       }
@@ -443,7 +443,7 @@ class _PaymentPageState extends State<PaymentPage> {
       return;
     }
 
-    if (_notesController.text.length >= maxNotesLength) {
+    if (_notesController.text.length > maxNotesLength) {
       setState(() {
         _notesError = 'Catatan sudah mencapai batas maksimal 150 karakter.';
       });
@@ -501,29 +501,11 @@ class _PaymentPageState extends State<PaymentPage> {
         success: true,
       );
       Navigator.pop(context, true);
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
 
-      final errorMessage = error.toString();
-      final lowerError = errorMessage.toLowerCase();
-
-      final message =
-          _isConnectionError(lowerError) ||
-              lowerError.contains('connection refused')
-          ? 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.'
-          : errorMessage
-                .replaceFirst('Exception: ', '')
-                .replaceAll('Payment successful', 'Pembayaran berhasil')
-                .replaceAll('Insufficient balance', 'Saldo tidak mencukupi')
-                .replaceAll('Merchant not found', 'Merchant tidak ditemukan')
-                .replaceAll(
-                  'Invalid payment amount',
-                  'Nominal pembayaran tidak valid',
-                )
-                .replaceAll(
-                  'Pilih submerchant pembayaran yang valid.',
-                  'Pilih subkategori pembayaran yang valid.',
-                );
+      const message =
+          'Pembayaran gagal diproses. Silakan periksa saldo dan coba lagi.';
 
       TopNotice.show(context, message, success: false);
     } finally {

@@ -24,6 +24,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   String _period = 'monthly';
   DateTimeRange? _customRange;
   String _selectedFlow = 'all';
+  int _requestVersion = 0;
 
   final TransactionService _transactionService = TransactionService();
   final ScrollController _scrollController = ScrollController();
@@ -80,47 +81,39 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   }
 
   Future<void> _loadTransactions() async {
-    if (!mounted || _isFetching) return;
+    final requestVersion = ++_requestVersion;
 
-    _isFetching = true;
-
-    if (_transactions.isEmpty) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-    }
+    setState(() {
+      _isLoading = true;
+      _isLoadingMore = false;
+      _nextCursor = null;
+      _hasMore = true;
+      _errorMessage = null;
+      _refreshErrorMessage = null;
+    });
 
     try {
-      final result = await _transactionService.getTransactions(sort: 'desc');
+      final result = await _transactionService.getTransactions(
+        sort: 'desc',
+        from: _dateFrom,
+        to: _dateTo,
+      );
 
-      if (!mounted) return;
+      if (!mounted || requestVersion != _requestVersion) return;
 
       setState(() {
         _transactions = result.transactions;
         _nextCursor = result.nextCursor;
         _hasMore = result.hasMore;
-        _errorMessage = null;
-        _refreshErrorMessage = null;
         _isLoading = false;
       });
-    } catch (error) {
-      if (!mounted) return;
+    } catch (_) {
+      if (!mounted || requestVersion != _requestVersion) return;
 
       setState(() {
-        if (_transactions.isEmpty) {
-          _errorMessage = error.toString().replaceFirst('Exception: ', '');
-        } else {
-          _refreshErrorMessage = error.toString().replaceFirst(
-            'Exception: ',
-            '',
-          );
-        }
-
+        _errorMessage = 'Gagal memuat riwayat transaksi. Silakan coba lagi.';
         _isLoading = false;
       });
-    } finally {
-      _isFetching = false;
     }
   }
 
@@ -151,38 +144,42 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   }
 
   Future<void> _loadMoreTransactions() async {
-    if (_isLoadingMore || !_hasMore || _nextCursor == null) return;
+    if (_isLoading || _isLoadingMore || !_hasMore || _nextCursor == null) {
+      return;
+    }
+
+    final requestVersion = _requestVersion;
+    final cursor = _nextCursor;
 
     setState(() => _isLoadingMore = true);
 
     try {
       final result = await _transactionService.getTransactions(
-        cursor: _nextCursor,
+        cursor: cursor,
         sort: 'desc',
+        from: _dateFrom,
+        to: _dateTo,
       );
 
-      if (!mounted) return;
+      if (!mounted || requestVersion != _requestVersion) return;
 
       setState(() {
-        final existingIds = _transactions.map((e) => e.id).toSet();
-
+        final existingIds = _transactions.map((item) => item.id).toSet();
         _transactions.addAll(
-          result.transactions.where((e) => !existingIds.contains(e.id)),
+          result.transactions.where((item) => !existingIds.contains(item.id)),
         );
-
         _nextCursor = result.nextCursor;
         _hasMore = result.hasMore;
+        _isLoadingMore = false;
       });
-    } catch (error) {
-      if (!mounted) return;
+    } catch (_) {
+      if (!mounted || requestVersion != _requestVersion) return;
 
       setState(() {
-        _refreshErrorMessage = error.toString().replaceFirst('Exception: ', '');
+        _refreshErrorMessage =
+            'Gagal memuat transaksi lainnya. Silakan coba lagi.';
+        _isLoadingMore = false;
       });
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingMore = false);
-      }
     }
   }
 
@@ -197,14 +194,19 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   }
 
   Future<void> _refreshTransactionsSilently() async {
-    if (!mounted || _isFetching) return;
+    if (!mounted || _isFetching || _isLoading || _isLoadingMore) return;
 
     _isFetching = true;
+    final requestVersion = _requestVersion;
 
     try {
-      final result = await _transactionService.getTransactions(sort: 'desc');
+      final result = await _transactionService.getTransactions(
+        sort: 'desc',
+        from: _dateFrom,
+        to: _dateTo,
+      );
 
-      if (!mounted) return;
+      if (!mounted || requestVersion != _requestVersion) return;
 
       setState(() {
         final updated = {
@@ -223,16 +225,15 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           _hasMore = result.hasMore;
         }
 
-        _errorMessage = null;
         _refreshErrorMessage = null;
-        _isLoading = false;
       });
-    } catch (error) {
-      if (!mounted) return;
-
-      setState(() {
-        _refreshErrorMessage = error.toString().replaceFirst('Exception: ', '');
-      });
+    } catch (_) {
+      if (mounted && requestVersion == _requestVersion) {
+        setState(() {
+          _refreshErrorMessage =
+              'Gagal memperbarui riwayat transaksi. Silakan coba lagi.';
+        });
+      }
     } finally {
       _isFetching = false;
     }
@@ -582,7 +583,15 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
   Widget _buildTransactionCard(TransactionModel transaction) {
     final isIncoming = transaction.isIncoming;
+    final status = transaction.status.toUpperCase();
     final isFailed = transaction.status == 'FAILED';
+
+    final statusColor = switch (status) {
+      'SUCCESS' => AppColors.success,
+      'PENDING' => Colors.orange.shade700,
+      'FAILED' => AppColors.error,
+      _ => Colors.grey,
+    };
 
     final Color transactionColor = isFailed
         ? Colors.grey
@@ -675,7 +684,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w600,
-                      color: isFailed ? AppColors.error : AppColors.success,
+                      color: statusColor,
                     ),
                   ),
                 ],

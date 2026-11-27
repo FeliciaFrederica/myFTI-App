@@ -219,7 +219,7 @@ class _TransferPageState extends State<TransferPage> {
   // Memeriksa panjang catatan transfer
   void _onDescriptionChanged(String value) {
     setState(() {
-      _descriptionError = value.length >= maxDescriptionLength
+      _descriptionError = value.length > maxDescriptionLength
           ? 'Catatan sudah mencapai batas maksimal 150 karakter.'
           : null;
     });
@@ -526,7 +526,7 @@ class _TransferPageState extends State<TransferPage> {
   // Kolom catatan transfer
   Widget _buildDescriptionField() {
     final currentLength = _descriptionController.text.length;
-    final isAtLimit = currentLength >= maxDescriptionLength;
+    final isAtLimit = currentLength > maxDescriptionLength;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

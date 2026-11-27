@@ -35,7 +35,23 @@ const getTransactions = async (req, res) => {
       limit,
       cursor,
       sort,
+      from,
+      to,
     });
+
+    const from = req.query.from ? new Date(req.query.from) : null;
+    const to = req.query.to ? new Date(req.query.to) : null;
+
+    if (
+      (from && Number.isNaN(from.getTime())) ||
+      (to && Number.isNaN(to.getTime())) ||
+      (from && to && from > to)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Rentang tanggal transaksi tidak valid.",
+      });
+    }
 
     return res.status(200).json({
       success: true,

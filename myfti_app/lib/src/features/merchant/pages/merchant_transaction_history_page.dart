@@ -703,8 +703,8 @@ class MerchantTransactionHistoryPageState
           const Icon(Icons.error_outline, color: Colors.redAccent, size: 42),
           const SizedBox(height: 12),
           Center(
-            child: Text(
-              _error.toString().replaceFirst('Exception: ', ''),
+            child: const Text(
+              'Gagal memuat riwayat transaksi. Silakan coba lagi.',
               textAlign: TextAlign.center,
             ),
           ),

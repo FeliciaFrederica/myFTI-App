@@ -20,6 +20,8 @@ class TransactionService {
   Future<TransactionPageResult> getTransactions({
     String? cursor,
     String sort = 'desc',
+    DateTime? from,
+    DateTime? to,
   }) async {
     final token = await SessionService.getToken();
 
@@ -31,13 +33,12 @@ class TransactionService {
       'limit': '10',
       'sort': sort,
       if (cursor != null) 'cursor': cursor,
+      if (from != null) 'from': from.toIso8601String(),
+      if (to != null) 'to': to.toIso8601String(),
     };
 
     final query = Uri(queryParameters: queryParameters).query;
-    final response = await ApiClient.get(
-      '/transactions?$query',
-      token: token,
-    );
+    final response = await ApiClient.get('/transactions?$query', token: token);
 
     final responseData = jsonDecode(response.body);
 
@@ -50,9 +51,8 @@ class TransactionService {
       return TransactionPageResult(
         transactions: data
             .map(
-              (item) => TransactionModel.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
+              (item) =>
+                  TransactionModel.fromJson(Map<String, dynamic>.from(item)),
             )
             .toList(),
         nextCursor: pagination['nextCursor'] as String?,
@@ -73,9 +73,7 @@ class TransactionService {
     final token = await SessionService.getToken();
 
     if (token == null || token.isEmpty) {
-      throw Exception(
-        'Sesi login tidak ditemukan. Silakan login kembali.',
-      );
+      throw Exception('Sesi login tidak ditemukan. Silakan login kembali.');
     }
 
     final response = await ApiClient.get(
@@ -102,15 +100,11 @@ class TransactionService {
 
     if (response.statusCode == 401) {
       await SessionService.clear();
-      throw Exception(
-        'Sesi login berakhir. Silakan login kembali.',
-      );
+      throw Exception('Sesi login berakhir. Silakan login kembali.');
     }
 
     if (response.statusCode == 404) {
-      throw Exception(
-        responseData['message'] ?? 'Transaksi tidak ditemukan.',
-      );
+      throw Exception(responseData['message'] ?? 'Transaksi tidak ditemukan.');
     }
 
     throw Exception(
