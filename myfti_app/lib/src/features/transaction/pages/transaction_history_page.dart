@@ -7,8 +7,6 @@ import '../models/transaction_model.dart';
 import '../services/transaction_service.dart';
 import 'transaction_detail_page.dart';
 
-enum SortOption { newest, oldest }
-
 class TransactionHistoryPage extends StatefulWidget {
   final bool showBackButton;
 
@@ -23,7 +21,9 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   Timer? _refreshTimer;
   bool _isFetching = false;
   String? _refreshErrorMessage;
-  SortOption _sortOption = SortOption.newest;
+  String _period = 'monthly';
+  DateTimeRange? _customRange;
+  String _selectedFlow = 'all';
 
   final TransactionService _transactionService = TransactionService();
   final ScrollController _scrollController = ScrollController();
@@ -36,6 +36,39 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
   bool _isLoading = true;
   String? _errorMessage;
+
+  DateTime get _dateFrom {
+    if (_customRange != null) return _customRange!.start;
+    final now = DateTime.now();
+    switch (_period) {
+      case 'weekly':
+        return DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(const Duration(days: 6));
+      case 'yearly':
+        return DateTime(now.year);
+      default:
+        return DateTime(now.year, now.month);
+    }
+  }
+
+  DateTime get _dateTo {
+    if (_customRange != null) {
+      return DateTime(
+        _customRange!.end.year,
+        _customRange!.end.month,
+        _customRange!.end.day,
+        23,
+        59,
+        59,
+        999,
+      );
+    }
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+  }
 
   @override
   void initState() {
@@ -59,9 +92,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     }
 
     try {
-      final result = await _transactionService.getTransactions(
-        sort: _sortOption == SortOption.oldest ? 'asc' : 'desc',
-      );
+      final result = await _transactionService.getTransactions(sort: 'desc');
 
       if (!mounted) return;
 
@@ -127,7 +158,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     try {
       final result = await _transactionService.getTransactions(
         cursor: _nextCursor,
-        sort: _sortOption == SortOption.oldest ? 'asc' : 'desc',
+        sort: 'desc',
       );
 
       if (!mounted) return;
@@ -171,9 +202,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     _isFetching = true;
 
     try {
-      final result = await _transactionService.getTransactions(
-        sort: _sortOption == SortOption.oldest ? 'asc' : 'desc',
-      );
+      final result = await _transactionService.getTransactions(sort: 'desc');
 
       if (!mounted) return;
 
@@ -187,11 +216,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         }
 
         _transactions = updated.values.toList()
-          ..sort(
-            (a, b) => _sortOption == SortOption.oldest
-                ? a.createdAt.compareTo(b.createdAt)
-                : b.createdAt.compareTo(a.createdAt),
-          );
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (_nextCursor == null) {
           _nextCursor = result.nextCursor;
@@ -222,21 +247,21 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     super.dispose();
   }
 
-  List<TransactionModel> _getTransactions(String category) {
+  List<TransactionModel> _getTransactions() {
     List<TransactionModel> result = List.from(_transactions);
 
-    if (category == 'incoming') {
+    if (_selectedFlow == 'incoming') {
       result = result.where((item) => item.isIncoming).toList();
-    } else if (category == 'outgoing') {
+    } else if (_selectedFlow == 'outgoing') {
       result = result.where((item) => item.isOutgoing).toList();
     }
 
-    result.sort((a, b) {
-      if (_sortOption == SortOption.newest) {
-        return b.createdAt.compareTo(a.createdAt);
-      }
-      return a.createdAt.compareTo(b.createdAt);
-    });
+    result = result.where((item) {
+      final date = item.createdAt;
+      return !date.isBefore(_dateFrom) && !date.isAfter(_dateTo);
+    }).toList();
+
+    result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return result;
   }
@@ -274,6 +299,193 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     final minute = date.minute.toString().padLeft(2, '0');
 
     return '$hour:$minute';
+  }
+
+  Future<void> _selectDateRange() async {
+    final now = DateTime.now();
+    final selected = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2024),
+      lastDate: now,
+      initialDateRange:
+          _customRange ??
+          DateTimeRange(
+            start: DateTime(now.year, now.month),
+            end: DateTime(now.year, now.month, now.day),
+          ),
+      helpText: 'Pilih rentang tanggal transaksi',
+      cancelText: 'Batal',
+      confirmText: 'Terapkan',
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _period = 'custom';
+      _customRange = selected;
+      _nextCursor = null;
+      _hasMore = true;
+    });
+    await _loadTransactions();
+  }
+
+  Widget _buildDateFilters() {
+    final label = _customRange == null
+        ? null
+        : '${_formatDate(_customRange!.start)} – ${_formatDate(_customRange!.end)}';
+    const flowOptions = <String, String>{
+      'all': 'Semua transaksi',
+      'incoming': 'Pemasukan',
+      'outgoing': 'Pengeluaran',
+    };
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: _customRange != null
+                        ? const Color(0xFFD1C4E9)
+                        : AppColors.primary,
+                  ),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _customRange != null ? 'custom' : _period,
+                    isDense: true,
+                    borderRadius: BorderRadius.circular(16),
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.text,
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'weekly',
+                        child: Text('Mingguan'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'monthly',
+                        child: Text('Bulanan'),
+                      ),
+                      DropdownMenuItem(value: 'yearly', child: Text('Tahunan')),
+                      DropdownMenuItem(value: 'custom', child: Text('Custom')),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      if (value == 'custom') {
+                        _selectDateRange();
+                        return;
+                      }
+                      setState(() {
+                        _period = value;
+                        _customRange = null;
+                        _nextCursor = null;
+                        _hasMore = true;
+                      });
+                      _loadTransactions();
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: _selectDateRange,
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: _customRange != null
+                          ? const Color(0xFFF3EEFC)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _customRange != null
+                            ? const Color(0xFFD1C4E9)
+                            : const Color(0xFFE6E0EE),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.calendar_today_outlined,
+                          size: 17,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            label ?? 'Pilih tanggal',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.text,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE6E0EE)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedFlow,
+                isExpanded: true,
+                borderRadius: BorderRadius.circular(14),
+                icon: const Icon(
+                  Icons.filter_list_rounded,
+                  color: AppColors.primary,
+                ),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.text,
+                  fontWeight: FontWeight.w600,
+                ),
+                items: flowOptions.entries
+                    .map(
+                      (entry) => DropdownMenuItem(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _selectedFlow = value);
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _getTitle(TransactionModel transaction) {
@@ -322,8 +534,8 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     }
   }
 
-  Widget _buildTransactionList(String category) {
-    final transactions = _getTransactions(category);
+  Widget _buildTransactionList() {
+    final transactions = _getTransactions();
 
     if (transactions.isEmpty) {
       return const Center(
@@ -477,129 +689,81 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          elevation: 0,
-          automaticallyImplyLeading: widget.showBackButton,
-          iconTheme: const IconThemeData(color: Colors.black),
-          title: const Text(
-            'Riwayat Transaksi',
-            style: TextStyle(
-              color: AppColors.text,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          actions: [
-            PopupMenuButton<SortOption>(
-              icon: const Icon(
-                Icons.filter_list_rounded,
-                color: AppColors.primary,
-              ),
-              tooltip: 'Urutkan transaksi',
-              onSelected: (value) {
-                setState(() {
-                  _sortOption = value;
-                });
-                _loadTransactions();
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: SortOption.newest,
-                  child: Text('Terbaru'),
-                ),
-                const PopupMenuItem(
-                  value: SortOption.oldest,
-                  child: Text('Terlama'),
-                ),
-              ],
-            ),
-            const SizedBox(width: 8),
-          ],
-          bottom: const TabBar(
-            labelColor: AppColors.primary,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: AppColors.primary,
-            indicatorWeight: 3,
-            labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-            tabs: [
-              Tab(text: 'Semua'),
-              Tab(text: 'Masuk'),
-              Tab(text: 'Keluar'),
-            ],
+        elevation: 0,
+        automaticallyImplyLeading: widget.showBackButton,
+        iconTheme: const IconThemeData(color: Colors.black),
+        title: const Text(
+          'Riwayat Transaksi',
+          style: TextStyle(
+            color: AppColors.text,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _errorMessage != null
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 48,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(_errorMessage!, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadTransactions,
-                        child: const Text('Coba Lagi'),
-                      ),
-                    ],
-                  ),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(_errorMessage!, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadTransactions,
+                      child: const Text('Coba Lagi'),
+                    ),
+                  ],
                 ),
-              )
-            : Column(
-                children: [
-                  if (_refreshErrorMessage != null)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      color: Colors.orange.withValues(alpha: 0.08),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.sync_problem,
-                            size: 16,
-                            color: Colors.orange,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Gagal memperbarui transaksi. Menampilkan data sebelumnya.',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.orange.shade800,
-                              ),
+              ),
+            )
+          : Column(
+              children: [
+                _buildDateFilters(),
+                if (_refreshErrorMessage != null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    color: Colors.orange.withValues(alpha: 0.08),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.sync_problem,
+                          size: 16,
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Gagal memperbarui transaksi. Menampilkan data sebelumnya.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.orange.shade800,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        _buildTransactionList('all'),
-                        _buildTransactionList('incoming'),
-                        _buildTransactionList('outgoing'),
+                        ),
                       ],
                     ),
                   ),
-                ],
-              ),
-      ),
+                Expanded(child: _buildTransactionList()),
+              ],
+            ),
     );
   }
 }
