@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
 import 'package:myfti_app/src/features/transaction/services/transaction_service.dart';
 import 'package:myfti_app/src/features/transaction/models/transaction_model.dart';
@@ -16,11 +16,9 @@ import '../../transaction/pages/transaction_history_page.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback? onProfileTap;
+  final VoidCallback? onHistoryTap;
 
-  const HomePage({
-    super.key,
-    this.onProfileTap,
-  });
+  const HomePage({super.key, this.onProfileTap, this.onHistoryTap});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -60,11 +58,7 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      await Future.wait([
-        _walletFuture,
-        _transactionFuture,
-        _userFuture,
-      ]);
+      await Future.wait([_walletFuture, _transactionFuture, _userFuture]);
     } catch (_) {
       // Error ditampilkan pada bagian data masing-masing
     }
@@ -83,8 +77,18 @@ class _HomePageState extends State<HomePage> {
   // Mengubah tanggal menjadi format yang mudah dibaca
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
 
     final day = date.day.toString().padLeft(2, '0');
@@ -103,9 +107,7 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFFF3EEFC),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'Logout',
           style: TextStyle(
@@ -116,11 +118,7 @@ class _HomePageState extends State<HomePage> {
         ),
         content: const Text(
           'Yakin ingin keluar dari akun myFTI?',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.black87,
-            height: 1.5,
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
         ),
         actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         actions: [
@@ -139,10 +137,7 @@ class _HomePageState extends State<HomePage> {
               onPressed: () => Navigator.pop(dialogContext, true),
               child: const Text(
                 'Logout',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -170,11 +165,7 @@ class _HomePageState extends State<HomePage> {
 
     if (!mounted) return;
 
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/login',
-      (route) => false,
-    );
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   // Menampilkan foto profil pengguna
@@ -190,10 +181,7 @@ class _HomePageState extends State<HomePage> {
     return const CircleAvatar(
       radius: 20,
       backgroundColor: Color(0xFFEDE7F6),
-      child: Icon(
-        Icons.person,
-        color: primaryPurple,
-      ),
+      child: Icon(Icons.person, color: primaryPurple),
     );
   }
 
@@ -244,9 +232,7 @@ class _HomePageState extends State<HomePage> {
                                     children: [
                                       const Text(
                                         'Selamat Datang,',
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                        ),
+                                        style: TextStyle(color: Colors.grey),
                                       ),
                                       Text(
                                         name,
@@ -271,10 +257,7 @@ class _HomePageState extends State<HomePage> {
                     IconButton(
                       onPressed: _confirmLogout,
                       tooltip: 'Logout',
-                      icon: const Icon(
-                        Icons.logout,
-                        color: primaryPurple,
-                      ),
+                      icon: const Icon(Icons.logout, color: primaryPurple),
                     ),
                   ],
                 ),
@@ -344,17 +327,19 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const TransactionHistoryPage(
-                              showBackButton: true,
-                            ),
-                          ),
-                        );
-                      },
+                      onPressed:
+                          widget.onHistoryTap ??
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const TransactionHistoryPage(
+                                      showBackButton: true,
+                                    ),
+                              ),
+                            );
+                          },
                       child: const Text(
                         'Lihat Semua',
                         style: TextStyle(color: primaryPurple),
@@ -489,10 +474,7 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 20),
                       const Text(
                         'Saldo Tersedia',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -600,9 +582,7 @@ class _HomePageState extends State<HomePage> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => const FinancialSummaryPage(),
-          ),
+          MaterialPageRoute(builder: (_) => const FinancialSummaryPage()),
         );
       },
       child: Container(
@@ -619,10 +599,7 @@ class _HomePageState extends State<HomePage> {
                 color: const Color(0xFFEDE7F6),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.insights_outlined,
-                color: primaryPurple,
-              ),
+              child: const Icon(Icons.insights_outlined, color: primaryPurple),
             ),
             const SizedBox(width: 12),
             const Expanded(
@@ -639,18 +616,12 @@ class _HomePageState extends State<HomePage> {
                   SizedBox(height: 2),
                   Text(
                     'Rekap pemasukan & pengeluaran',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right,
-              color: Colors.grey,
-            ),
+            const Icon(Icons.chevron_right, color: Colors.grey),
           ],
         ),
       ),
@@ -676,20 +647,13 @@ class _HomePageState extends State<HomePage> {
                 color: const Color(0xFFEDE7F6),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                icon,
-                color: primaryPurple,
-                size: 26,
-              ),
+              child: Icon(icon, color: primaryPurple, size: 26),
             ),
             const SizedBox(height: 8),
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                color: textColor,
-              ),
+              style: const TextStyle(fontSize: 12, color: textColor),
             ),
           ],
         ),
@@ -706,9 +670,7 @@ class _HomePageState extends State<HomePage> {
           return const Padding(
             padding: EdgeInsets.all(24),
             child: Center(
-              child: CircularProgressIndicator(
-                color: primaryPurple,
-              ),
+              child: CircularProgressIndicator(color: primaryPurple),
             ),
           );
         }
@@ -757,18 +719,11 @@ class _HomePageState extends State<HomePage> {
             ),
             child: const Column(
               children: [
-                Icon(
-                  Icons.receipt_long_outlined,
-                  color: Colors.grey,
-                  size: 36,
-                ),
+                Icon(Icons.receipt_long_outlined, color: Colors.grey, size: 36),
                 SizedBox(height: 10),
                 Text(
                   'Belum ada transaksi.',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
                 ),
               ],
             ),
@@ -796,10 +751,7 @@ class _HomePageState extends State<HomePage> {
               child: ListTile(
                 leading: CircleAvatar(
                   backgroundColor: const Color(0xFFEDE7F6),
-                  child: Icon(
-                    icon,
-                    color: primaryPurple,
-                  ),
+                  child: Icon(icon, color: primaryPurple),
                 ),
                 title: Text(
                   title,
@@ -830,8 +782,8 @@ class _HomePageState extends State<HomePage> {
                     color: !isSuccess
                         ? Colors.grey
                         : isIncoming
-                            ? Colors.green
-                            : Colors.redAccent,
+                        ? Colors.green
+                        : Colors.redAccent,
                   ),
                 ),
               ),
@@ -881,9 +833,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _openTopUp() async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => const TopUpPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const TopUpPage()),
     );
 
     if (result == true && mounted) {
@@ -895,9 +845,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _openTransfer() async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => const TransferPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const TransferPage()),
     );
 
     if (result == true && mounted) {
@@ -909,9 +857,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _openPayment() async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => const PaymentPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const PaymentPage()),
     );
 
     if (result == true && mounted) {
@@ -923,9 +869,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _openWithdraw() async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => const WithdrawPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const WithdrawPage()),
     );
 
     if (result == true && mounted) {

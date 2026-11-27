@@ -6,9 +6,14 @@ import '../../features/wallet/pages/home_page.dart';
 import '../../features/wallet/pages/my_wallet_page.dart';
 import '../../features/authentication/pages/profile_page.dart';
 import '../../features/transaction/pages/transaction_history_page.dart';
+import '../../features/merchant/pages/merchant_home_page.dart';
+import '../../features/merchant/pages/merchant_transaction_history_page.dart';
+import '../../features/merchant/pages/merchant_profile_page.dart';
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
+  const MainNavigation({super.key, this.isMerchant = false});
+
+  final bool isMerchant;
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -17,7 +22,7 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   double _pageOpacity = 1.0;
 
- void _switchTab(int index) {
+  void _switchTab(int index) {
     if (index < 0 || index >= _pages.length || index == _currentIndex) {
       return;
     }
@@ -45,12 +50,26 @@ class _MainNavigationState extends State<MainNavigation> {
   static const Color primaryPurple = Color(0xFF673AB7);
   static const Color backgroundColor = Color(0xFFF8F6FC);
 
-  late final List<Widget> _pages = [
-    HomePage(onProfileTap: () => _switchTab(3)),
-    MyWalletPage(key: _walletKey, onHistoryTap: () => _switchTab(2)),
-    TransactionHistoryPage(),
-    ProfilePage(),
-  ];
+  late final List<Widget> _pages = widget.isMerchant
+      ? [
+          const MerchantHomePage(),
+          MyWalletPage(
+            key: _walletKey,
+            readOnly: true,
+            onHistoryTap: () => _switchTab(2),
+          ),
+          const MerchantTransactionHistoryPage(),
+          const MerchantProfilePage(),
+        ]
+      : [
+          HomePage(
+            onProfileTap: () => _switchTab(3),
+            onHistoryTap: () => _switchTab(2),
+          ),
+          MyWalletPage(key: _walletKey, onHistoryTap: () => _switchTab(2)),
+          TransactionHistoryPage(),
+          const ProfilePage(),
+        ];
 
   final List<IconData> _icons = [
     Icons.home_outlined,
@@ -60,8 +79,9 @@ class _MainNavigationState extends State<MainNavigation> {
   ];
 
   final List<String> _labels = ['Beranda', 'Dompet', 'Riwayat', 'Profil'];
-  final GlobalKey<MyWalletPageState> _walletKey = GlobalKey<MyWalletPageState>();
-  
+  final GlobalKey<MyWalletPageState> _walletKey =
+      GlobalKey<MyWalletPageState>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,10 +92,7 @@ class _MainNavigationState extends State<MainNavigation> {
         opacity: _pageOpacity,
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
-        child: IndexedStack(
-          index: _currentIndex,
-          children: _pages,
-        ),
+        child: IndexedStack(index: _currentIndex, children: _pages),
       ),
 
       bottomNavigationBar: SafeArea(
@@ -85,6 +102,8 @@ class _MainNavigationState extends State<MainNavigation> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final itemWidth = constraints.maxWidth / _icons.length;
+              final useSolidNavigation =
+                  widget.isMerchant && _currentIndex == 3;
 
               return SizedBox(
                 height: 85,
@@ -111,15 +130,21 @@ class _MainNavigationState extends State<MainNavigation> {
                             top: Radius.circular(24),
                           ),
                           child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                            filter: ImageFilter.blur(
+                              sigmaX: useSolidNavigation ? 0 : 18,
+                              sigmaY: useSolidNavigation ? 0 : 18,
+                            ),
                             child: Container(
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEDE7F6).withValues(alpha: 0.45),
+                                color: const Color(0xFFEDE7F6).withValues(
+                                  alpha: useSolidNavigation ? 1 : 0.45,
+                                ),
                                 borderRadius: const BorderRadius.vertical(
                                   top: Radius.circular(24),
                                 ),
                                 border: Border.all(
-                                  color: const Color(0xFFD1C4E9).withValues(alpha: 0.65),
+                                  color: const Color(0xFFD1C4E9)
+                                      .withValues(alpha: 0.65),
                                   width: 1,
                                 ),
                               ),

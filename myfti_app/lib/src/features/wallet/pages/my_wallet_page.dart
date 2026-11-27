@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myfti_app/src/features/wallet/services/wallet_service.dart';
 import 'package:myfti_app/src/core/widgets/top_notice.dart';
+
 import 'top_up_page.dart';
 
 class MyWalletPage extends StatefulWidget {
   final VoidCallback? onHistoryTap;
+  final bool readOnly;
 
-  const MyWalletPage({super.key, this.onHistoryTap});
+  const MyWalletPage({super.key, this.onHistoryTap, this.readOnly = false});
 
   @override
   MyWalletPageState createState() => MyWalletPageState();
@@ -86,10 +88,7 @@ class MyWalletPageState extends State<MyWalletPage> {
                   const SizedBox(height: 12),
                   const Text(
                     'Gagal mengambil data wallet.',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                   const SizedBox(height: 8),
                   TextButton(
@@ -107,9 +106,7 @@ class MyWalletPageState extends State<MyWalletPage> {
                     ),
                     child: const Text(
                       'Coba Lagi',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -122,11 +119,16 @@ class MyWalletPageState extends State<MyWalletPage> {
           final String walletId = wallet['walletId'] as String;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 170),
+            padding: const EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: 170,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Wallet Balance                
+                // Wallet Balance
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
@@ -307,7 +309,9 @@ class MyWalletPageState extends State<MyWalletPage> {
                             const SizedBox(width: 8),
                             GestureDetector(
                               onTap: () async {
-                                await Clipboard.setData(ClipboardData(text: walletId));
+                                await Clipboard.setData(
+                                  ClipboardData(text: walletId),
+                                );
 
                                 if (!context.mounted) return;
 
@@ -337,56 +341,57 @@ class MyWalletPageState extends State<MyWalletPage> {
                       _buildInfoTile(
                         icon: Icons.account_balance_outlined,
                         title: 'Jenis Akun',
-                        subtitle: Text('Dompet Mahasiswa'),
+                        subtitle: Text(
+                          widget.readOnly
+                              ? 'Dompet Merchant'
+                              : 'Dompet Mahasiswa',
+                        ),
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 28),
-
-                const Text(
-                  'Menu Dompet',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
+                if (!widget.readOnly) ...[
+                  const SizedBox(height: 28),
+                  const Text(
+                    'Menu Dompet',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
                   ),
-                ),
-
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionButton(
-                        icon: Icons.add_circle_outline,
-                        label: 'Top Up',
-                        onTap: () async {
-                          final result = await Navigator.push<bool>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const TopUpPage(),
-                            ),
-                          );
-                          if (result == true && mounted) {
-                            setState(() {
-                              _loadWallet();
-                            });
-                          }
-                        },
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionButton(
+                          icon: Icons.add_circle_outline,
+                          label: 'Top Up',
+                          onTap: () async {
+                            final result = await Navigator.push<bool>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const TopUpPage(),
+                              ),
+                            );
+                            if (result == true && mounted) {
+                              setState(_loadWallet);
+                            }
+                          },
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionButton(
-                        icon: Icons.receipt_long_outlined,
-                        label: 'Riwayat',
-                        onTap: widget.onHistoryTap ?? () {},
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildActionButton(
+                          icon: Icons.receipt_long_outlined,
+                          label: 'Riwayat',
+                          onTap: widget.onHistoryTap ?? () {},
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ],
             ),
           );

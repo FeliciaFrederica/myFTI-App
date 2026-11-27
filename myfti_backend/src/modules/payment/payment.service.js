@@ -65,7 +65,7 @@ const createPayment = async (studentId, data) => {
       );
     }
 
-  // Validasi nominal
+  // Validasi nominal pembayaran positif
   if (!Number.isSafeInteger(amount) || amount <= 0) {
     throw Object.assign(new Error("Invalid payment amount"), {
       statusCode: 400,
@@ -192,31 +192,32 @@ const createPayment = async (studentId, data) => {
           const groupId = crypto.randomUUID();
           const reference = `PAY-${crypto.randomUUID()}`;
 
-          await tx.transaction.createMany({
-            data: [
-              {
-                reference,
-                type: "PAYMENT",
-                amount,
-                description:
-                  description || `Payment to ${merchant.fullName}`,
-                subcategory,
-                userId: studentId,
-                transferGroupId: groupId,
-                counterpartName: merchant.fullName,
-              },
-              {
-                reference: `PAY-${crypto.randomUUID()}`,
-                type: "PAYMENT_IN",
-                amount,
-                description:
-                  description || `Payment from ${student.fullName}`,
-                subcategory,
-                userId: merchant.id,
-                transferGroupId: groupId,
-                counterpartName: student.fullName,
-              },
-            ],
+          const studentTransaction = await tx.transaction.create({
+            data: {
+              reference,
+              type: "PAYMENT",
+              amount,
+              description:
+                description || `Payment to ${merchant.fullName}`,
+              subcategory,
+              userId: studentId,
+              transferGroupId: groupId,
+              counterpartName: merchant.fullName,
+            },
+          });
+
+          await tx.transaction.create({
+            data: {
+              reference: `PAY-${crypto.randomUUID()}`,
+              type: "PAYMENT_IN",
+              amount,
+              description:
+                description || `Payment from ${student.fullName}`,
+              subcategory,
+              userId: merchant.id,
+              transferGroupId: groupId,
+              counterpartName: student.fullName,
+            },
           });
 
           const updatedWallet = await tx.wallet.findUnique({
@@ -240,6 +241,7 @@ const createPayment = async (studentId, data) => {
 
           return {
             reference,
+            transaction: studentTransaction,
             amount,
             merchant: merchant.fullName,
             balance: updatedWallet.balance,

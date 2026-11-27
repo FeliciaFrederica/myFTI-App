@@ -65,15 +65,15 @@ const topUp = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Top up berhasil.",
+      message: "Isi saldo berhasil.",
       data: result,
     });
   } catch (error) {
-    console.error("Top up error:", error);
+    console.error("Isi saldo error:", error);
 
     return res.status(error.statusCode || 500).json({
       success: false,
-      message: error.message || "Gagal melakukan top up.",
+      message: error.message || "Gagal mengisi saldo.",
     });
   }
 };

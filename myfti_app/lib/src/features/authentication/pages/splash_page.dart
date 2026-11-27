@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -18,9 +19,19 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _start() async {
     await Future.delayed(const Duration(seconds: 5));
-    final loggedIn = await SessionService.isLoggedIn();
+    final token = await SessionService.getToken();
+    final user = token == null || token.isEmpty
+        ? null
+        : await SessionService.getUser();
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, loggedIn ? '/home' : '/login');
+
+    final destination = user == null
+        ? '/login'
+        : user.role.toUpperCase() == 'MERCHANT'
+        ? '/merchant'
+        : '/home';
+
+    Navigator.pushReplacementNamed(context, destination);
   }
 
   @override
@@ -45,9 +56,10 @@ class _SplashScreenState extends State<SplashScreen> {
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: const [
                   BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 20,
-                      offset: Offset(0, 8)),
+                    color: Colors.black26,
+                    blurRadius: 20,
+                    offset: Offset(0, 8),
+                  ),
                 ],
               ),
               child: ClipRRect(
@@ -66,15 +78,20 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text('myFTI',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1)),
+            const Text(
+              'myFTI',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 34,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
             const SizedBox(height: 6),
-            const Text('Dompet Digital untuk Mahasiswa FTI',
-                style: TextStyle(color: Colors.white70)),
+            const Text(
+              'Dompet Digital untuk Mahasiswa FTI',
+              style: TextStyle(color: Colors.white70),
+            ),
             const SizedBox(height: 40),
             const CircularProgressIndicator(color: Colors.white),
           ],

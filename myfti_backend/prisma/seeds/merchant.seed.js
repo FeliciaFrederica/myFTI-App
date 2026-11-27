@@ -7,28 +7,43 @@ const prisma = require('../../src/config/prisma');
 const merchants = [
   {
     fullName: 'Alleyway',
-    email: 'alleyway@myfti.test',
+    previousEmail: 'alleyway@myfti.test',
+    email: 'alleyway@gmail.com',
     category: 'ALLEYWAY',
+    bankCode: 'ABC',
+    accountNumber: '250012250022',
   },
   {
     fullName: 'Print Shop',
-    email: 'printshop@myfti.test',
+    previousEmail: 'printshop@myfti.test',
+    email: 'print@gmail.com',
     category: 'PRINT',
+    bankCode: 'MANDIRIW',
+    accountNumber: '250025250027',
   },
   {
-    fullName: 'Kantin Teknik',
-    email: 'kantinteknik@myfti.test',
+    fullName: 'Kantin',
+    previousEmail: 'kantinteknik@myfti.test',
+    email: 'kantin@gmail.com',
     category: 'KANTIN',
+    bankCode: 'BNN',
+    accountNumber: '250039250027',
   },
   {
-    fullName: 'CP Jukel & PO',
-    email: 'jukelpo@myfti.test',
+    fullName: 'Jukel & PO',
+    previousEmail: 'jukelpo@myfti.test',
+    email: 'jukel@gmail.com',
     category: 'JUKEL_PO',
+    bankCode: 'ABC',
+    accountNumber: '250025250022',
   },
   {
     fullName: 'Akademik',
-    email: 'akademik@myfti.test',
+    previousEmail: 'akademik@myfti.test',
+    email: 'akademik@gmail.com',
     category: 'AKADEMIK',
+    bankCode: 'BNN',
+    accountNumber: '1234567890',
   },
 ];
 
@@ -55,9 +70,13 @@ async function main() {
   await prisma.$transaction(async (tx) => {
     for (const item of merchants) {
       const email = item.email.trim().toLowerCase();
+      const emailsToFind = [
+        email,
+        ...(item.previousEmail ? [item.previousEmail.trim().toLowerCase()] : []),
+      ];
 
-      const existing = await tx.user.findUnique({
-        where: { email },
+      const existing = await tx.user.findFirst({
+        where: { email: { in: emailsToFind } },
       });
 
       if (existing && existing.role !== 'MERCHANT') {
@@ -73,6 +92,7 @@ async function main() {
           where: { id: existing.id },
           data: {
             fullName: item.fullName,
+            email,
             passwordHash,
             merchantCategory: item.category,
           },
@@ -103,6 +123,22 @@ async function main() {
           },
         });
       }
+
+    await tx.bankAccount.upsert({
+      where: {
+        userId_bankCode_accountNumber: {
+          userId: merchant.id,
+          bankCode: item.bankCode,
+          accountNumber: item.accountNumber,
+        },
+      },
+      update: {},
+      create: {
+        userId: merchant.id,
+        bankCode: item.bankCode,
+        accountNumber: item.accountNumber,
+      },
+    });
 
       console.log(`Merchant ready: ${merchant.email}`);
     }
