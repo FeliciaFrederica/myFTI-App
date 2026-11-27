@@ -4,6 +4,7 @@ import '../../authentication/models/user_model.dart';
 import '../../authentication/services/auth_service.dart';
 import '../../authentication/widgets/user_avatar.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../withdraw/services/withdraw_service.dart';
 
 class MerchantProfilePage extends StatefulWidget {
   const MerchantProfilePage({super.key});
@@ -17,17 +18,31 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
   static const Color _text = Color(0xFF2D1B46);
 
   late Future<UserModel> _userFuture;
+  Future<List<Map<String, dynamic>>> _bankAccountsFuture = Future.value(
+    const <Map<String, dynamic>>[],
+  );
+  final WithdrawService _withdrawService = WithdrawService();
+
+  static const Map<String, String> _bankNames = {
+    'ABC': 'ABC',
+    'MANDIRIW': 'Mandiriw',
+    'BNN': 'BNN',
+  };
 
   @override
   void initState() {
     super.initState();
     _userFuture = AuthService.getProfile();
+    _bankAccountsFuture = _withdrawService.getSavedBankAccounts();
   }
 
   Future<void> _refresh() async {
-    setState(() => _userFuture = AuthService.getProfile());
+    setState(() {
+      _userFuture = AuthService.getProfile();
+      _bankAccountsFuture = _withdrawService.getSavedBankAccounts();
+    });
     try {
-      await _userFuture;
+      await Future.wait([_userFuture, _bankAccountsFuture]);
     } catch (_) {}
   }
 
@@ -110,6 +125,84 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
     );
   }
 
+  Widget _bankAccounts() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _bankAccountsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Card(
+            color: Colors.white,
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(child: CircularProgressIndicator(color: _purple)),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Card(
+            color: Colors.white,
+            child: ListTile(
+              leading: const Icon(Icons.error_outline, color: Colors.red),
+              title: const Text('Rekening bank gagal dimuat.'),
+              trailing: IconButton(
+                tooltip: 'Coba lagi',
+                onPressed: () => setState(() {
+                  _bankAccountsFuture = _withdrawService.getSavedBankAccounts();
+                }),
+                icon: const Icon(Icons.refresh),
+              ),
+            ),
+          );
+        }
+
+        final accounts = snapshot.data ?? [];
+        if (accounts.isEmpty) {
+          return const Card(
+            color: Colors.white,
+            child: ListTile(
+              leading: Icon(Icons.account_balance_outlined, color: _purple),
+              title: Text('Belum ada rekening tersimpan'),
+              subtitle: Text('Rekening yang disimpan akan muncul di sini.'),
+            ),
+          );
+        }
+
+        return Card(
+          color: Colors.white,
+          elevation: 0,
+          child: Column(
+            children: [
+              for (var index = 0; index < accounts.length; index++) ...[
+                if (index > 0) const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(
+                    Icons.account_balance_outlined,
+                    color: _purple,
+                  ),
+                  title: Text(
+                    _bankNames[accounts[index]['bankCode']
+                            ?.toString()
+                            .toUpperCase()] ??
+                        accounts[index]['bankCode']?.toString() ??
+                        'Bank',
+                  ),
+                  subtitle: Text(
+                    accounts[index]['accountNumber']?.toString() ?? '-',
+                    style: const TextStyle(
+                      color: _text,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -154,7 +247,12 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
 
             final user = snapshot.data!;
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                140 + MediaQuery.of(context).padding.bottom,
+              ),
               children: [
                 Center(
                   child: UserAvatar(
@@ -193,13 +291,33 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                const Padding(
+                  padding: EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    'Rekening Bank',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _text,
+                    ),
+                  ),
+                ),
+                _bankAccounts(),
+                const SizedBox(height: 24),
                 SizedBox(
                   height: 50,
-                  child: OutlinedButton.icon(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
                     onPressed: _logout,
                     icon: const Icon(Icons.logout),
-                    label: const Text('Keluar'),
-                    style: OutlinedButton.styleFrom(foregroundColor: _purple),
+                    label: const Text('Logout'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
                   ),
                 ),
               ],

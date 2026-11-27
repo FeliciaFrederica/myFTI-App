@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../transaction/models/transaction_model.dart';
+import '../../transaction/pages/transaction_detail_page.dart';
 import '../services/merchant_dashboard_service.dart';
 
 class MerchantTransactionHistoryPage extends StatefulWidget {
@@ -78,12 +79,11 @@ class MerchantTransactionHistoryPageState
         _categories = dashboard.categories;
       });
     } catch (_) {
-      // Riwayat tetap bisa menampilkan semua kategori.
+      // Riwayat bisa menampilkan semua kategori
     }
   }
 
-  // MainNavigation dapat memanggil ini saat pengguna menekan
-  // tautan Riwayat dari salah satu kartu kategori.
+  // mengarahakan Riwayat dari home ke page ini
   void selectCategory(String? subcategory) {
     final nextCategory = subcategory ?? _allCategories;
     if (_selectedCategory == nextCategory) return;
@@ -591,84 +591,94 @@ class MerchantTransactionHistoryPageState
       color: Colors.white,
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(15),
-        child: Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEDE7F6),
-                borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) =>
+                TransactionDetailPage(transactionId: transaction.id),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE7F6),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  isWithdraw
+                      ? Icons.north_east_rounded
+                      : Icons.south_west_rounded,
+                  color: _purple,
+                  size: 23,
+                ),
               ),
-              child: Icon(
-                isWithdraw
-                    ? Icons.north_east_rounded
-                    : Icons.south_west_rounded,
-                color: _purple,
-                size: 23,
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isWithdraw
+                          ? 'Pencairan Otomatis'
+                          : transaction.counterpartName ??
+                                'Pembayaran pelanggan',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: _text,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      transaction.description ??
+                          (isWithdraw
+                              ? 'Pencairan saldo merchant'
+                              : 'Pembayaran masuk'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      _formatDateTime(transaction.createdAt),
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    isWithdraw
-                        ? 'Pencairan Otomatis'
-                        : transaction.counterpartName ?? 'Pembayaran pelanggan',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: _text,
+                    '${isWithdraw ? '−' : '+'} ${_formatRupiah(transaction.amount)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isWithdraw ? _purple : Colors.green,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    transaction.description ??
-                        (isWithdraw
-                            ? 'Pencairan saldo merchant'
-                            : 'Pembayaran masuk'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    _formatDateTime(transaction.createdAt),
-                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    isSuccess ? 'Berhasil' : transaction.status,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: isSuccess ? Colors.green : Colors.redAccent,
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '${isWithdraw ? '−' : '+'} ${_formatRupiah(transaction.amount)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isWithdraw ? _purple : Colors.green,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  isSuccess ? 'Berhasil' : transaction.status,
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: isSuccess ? Colors.green : Colors.redAccent,
-                  ),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

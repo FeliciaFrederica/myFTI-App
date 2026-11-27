@@ -32,7 +32,7 @@ const merchants = [
   {
     fullName: 'Jukel & PO',
     previousEmail: 'jukelpo@myfti.test',
-    email: 'alleyway@gmail.com',
+    email: 'jukel@gmail.com',
     category: 'JUKEL_PO',
     bankCode: 'ABC',
     accountNumber: '250025250022',

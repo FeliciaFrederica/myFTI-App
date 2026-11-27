@@ -123,7 +123,7 @@ class MerchantDashboardService {
       },
     ).query;
     final response = await ApiClient.get(
-      '/transactions/incoming?$query',
+      '/transactions?$query',
       token: token,
     ).timeout(const Duration(seconds: 15));
     final decoded = jsonDecode(response.body);
