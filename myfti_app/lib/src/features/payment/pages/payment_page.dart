@@ -6,7 +6,7 @@ import 'package:myfti_app/src/core/widgets/top_notice.dart';
 
 import '../../notification/services/local_notification_service.dart';
 import '../../transaction/pages/transaction_confirmation_page.dart';
-import '../../transaction/pages/transaction_success_page.dart';
+import '../../transaction/pages/transaction_detail_page.dart';
 import '../../transaction/services/transaction_pin_flow.dart';
 import '../services/payment_service.dart';
 
@@ -24,7 +24,6 @@ class _PaymentPageState extends State<PaymentPage> {
   static const Color borderColor = Color(0xFFD1C4E9);
   static const Color cardColor = Color(0xFFEDE7F6);
 
-  static const int minPayment = 10000;
   static const int maxNotesLength = 150;
 
   static const Map<String, String> _categoryValues = {
@@ -243,6 +242,17 @@ class _PaymentPageState extends State<PaymentPage> {
     });
   }
 
+  // Memeriksa perubahan nominal pembayaran
+  void _onAmountChanged(String value) {
+    setState(() {
+      if (value.trim().isEmpty) {
+        _amountError = null;
+      } else {
+        _amountError = null;
+      }
+    });
+  }
+
   // Memeriksa panjang catatan pembayaran
   void _onNotesChanged(String value) {
     setState(() {
@@ -280,9 +290,6 @@ class _PaymentPageState extends State<PaymentPage> {
 
       if (_amount <= 0) {
         _amountError = 'Masukkan nominal pembayaran.';
-        isValid = false;
-      } else if (_amount < minPayment) {
-        _amountError = 'Minimal pembayaran adalah Rp10.000.';
         isValid = false;
       }
 
@@ -335,6 +342,28 @@ class _PaymentPageState extends State<PaymentPage> {
     if (confirmed == true && mounted) {
       await _submitPayment();
     }
+  }
+
+  Widget _confirmationRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(label, style: const TextStyle(color: Colors.grey)),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildSubcategorySelector() {
@@ -408,13 +437,6 @@ class _PaymentPageState extends State<PaymentPage> {
       return;
     }
 
-    if (_amount < minPayment) {
-      setState(() {
-        _amountError = 'Minimal pembayaran adalah Rp10.000.';
-      });
-      return;
-    }
-
     // Memeriksa kecukupan saldo sebelum verifikasi PIN
     if (_amount > _balance) {
       TopNotice.show(context, 'Saldo kamu tidak mencukupi.', success: false);
@@ -457,18 +479,27 @@ class _PaymentPageState extends State<PaymentPage> {
 
       LocalNotificationService.checkNow();
 
+      final transaction = result['transaction'];
+      final transactionId = transaction is Map
+          ? transaction['id']?.toString()
+          : null;
+
+      if (transactionId == null || transactionId.isEmpty) {
+        throw Exception('ID transaksi pembayaran tidak ditemukan.');
+      }
+
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => TransactionSuccessPage(
-            title: 'Pembayaran Berhasil',
-            amount: _amount,
-            recipient: result['merchant']?.toString() ?? '-',
-            reference: result['reference']?.toString() ?? '-',
-          ),
+          builder: (_) => TransactionDetailPage(transactionId: transactionId),
         ),
       );
 
       if (!mounted) return;
+      TopNotice.show(
+        context,
+        'Pembayaran ${_formatRupiah(_amount)} berhasil!',
+        success: true,
+      );
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
@@ -694,6 +725,7 @@ class _PaymentPageState extends State<PaymentPage> {
           enabled: !_isPaying,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          onChanged: _onAmountChanged,
           decoration:
               _inputDecoration(
                 hint: 'Masukkan nominal pembayaran',

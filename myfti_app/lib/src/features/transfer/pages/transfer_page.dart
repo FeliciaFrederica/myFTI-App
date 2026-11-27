@@ -5,7 +5,7 @@ import 'package:myfti_app/src/core/widgets/top_notice.dart';
 import '../../notification/services/local_notification_service.dart';
 import '../../wallet/services/wallet_service.dart';
 import '../../transaction/pages/transaction_confirmation_page.dart';
-import '../../transaction/pages/transaction_success_page.dart';
+import '../../transaction/pages/transaction_detail_page.dart';
 import '../../transaction/services/transaction_pin_flow.dart';
 import '../services/transfer_service.dart';
 
@@ -354,28 +354,26 @@ class _TransferPageState extends State<TransferPage> {
 
       LocalNotificationService.checkNow();
 
-      final recipient = result['recipient'];
       final transactions = result['transactions'];
       final senderTransaction = transactions is Map
           ? transactions['sender']
           : null;
+      final transactionId = senderTransaction is Map
+          ? senderTransaction['id']?.toString()
+          : null;
+
+      if (transactionId == null || transactionId.isEmpty) {
+        throw Exception('ID transaksi transfer tidak ditemukan.');
+      }
 
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => TransactionSuccessPage(
-            title: 'Transfer Berhasil',
-            amount: _amount,
-            recipient: recipient is Map
-                ? recipient['fullName']?.toString() ?? '-'
-                : _recipient?['fullName']?.toString() ?? '-',
-            reference: senderTransaction is Map
-                ? senderTransaction['reference']?.toString() ?? '-'
-                : result['transferGroupId']?.toString() ?? '-',
-          ),
+          builder: (_) => TransactionDetailPage(transactionId: transactionId),
         ),
       );
 
       if (!mounted) return;
+      TopNotice.show(context, 'Transfer berhasil dilakukan!', success: true);
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;

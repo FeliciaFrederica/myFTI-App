@@ -5,7 +5,7 @@ import 'package:myfti_app/src/core/widgets/top_notice.dart';
 import '../../notification/services/local_notification_service.dart';
 import '../../wallet/services/wallet_service.dart';
 import '../../transaction/pages/transaction_confirmation_page.dart';
-import '../../transaction/pages/transaction_success_page.dart';
+import '../../transaction/pages/transaction_detail_page.dart';
 import '../../transaction/services/transaction_pin_flow.dart';
 
 class TopUpPage extends StatefulWidget {
@@ -275,21 +275,26 @@ class _TopUpPageState extends State<TopUpPage> {
       LocalNotificationService.checkNow();
 
       final transaction = result['transaction'];
+      final transactionId = transaction is Map
+          ? transaction['id']?.toString()
+          : null;
+
+      if (transactionId == null || transactionId.isEmpty) {
+        throw Exception('ID transaksi top up tidak ditemukan.');
+      }
+
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => TransactionSuccessPage(
-            title: 'Isi Saldo Berhasil',
-            amount: amount,
-            recipient: 'Saldo myFTI',
-            reference: transaction is Map
-                ? transaction['reference']?.toString() ?? '-'
-                : '-',
-            recipientLabel: 'Masuk ke',
-          ),
+          builder: (_) => TransactionDetailPage(transactionId: transactionId),
         ),
       );
 
       if (!mounted) return;
+      TopNotice.show(
+        context,
+        'Isi Saldo ${_formatRupiah(amount)} berhasil!',
+        success: true,
+      );
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;

@@ -5,7 +5,7 @@ import 'package:myfti_app/src/core/widgets/top_notice.dart';
 import '../../wallet/services/wallet_service.dart';
 import '../../transaction/services/transaction_pin_flow.dart';
 import '../../transaction/pages/transaction_confirmation_page.dart';
-import '../../transaction/pages/transaction_success_page.dart';
+import '../../transaction/pages/transaction_detail_page.dart';
 import '../../notification/services/local_notification_service.dart';
 import '../services/withdraw_service.dart';
 
@@ -400,32 +400,27 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
       LocalNotificationService.checkNow();
 
-      final destination = result['destination'];
       final transaction = result['transaction'];
-      final accountNumber = destination is Map
-          ? destination['accountNumber']?.toString() ?? ''
-          : '';
-      final maskedAccount = accountNumber.length >= 4
-          ? '•••• ${accountNumber.substring(accountNumber.length - 4)}'
-          : accountNumber;
+      final transactionId = transaction is Map
+          ? transaction['id']?.toString()
+          : null;
+
+      if (transactionId == null || transactionId.isEmpty) {
+        throw Exception('ID transaksi withdraw tidak ditemukan.');
+      }
 
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => TransactionSuccessPage(
-            title: 'Penarikan Berhasil',
-            amount: _amount,
-            recipient: destination is Map
-                ? '${destination['bankName'] ?? 'Bank'} $maskedAccount'.trim()
-                : 'Rekening bank',
-            reference: transaction is Map
-                ? transaction['reference']?.toString() ?? '-'
-                : '-',
-            recipientLabel: 'Tujuan',
-          ),
+          builder: (_) => TransactionDetailPage(transactionId: transactionId),
         ),
       );
 
       if (!mounted) return;
+      TopNotice.show(
+        context,
+        'Penarikan ${_formatRupiah(_amount)} berhasil!',
+        success: true,
+      );
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
@@ -652,7 +647,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
         _buildSectionTitle('Bank Tujuan'),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          initialValue: _selectedBankCode,
+          value: _selectedBankCode,
           isExpanded: true,
           decoration: _inputDecoration(
             hint: 'Pilih bank tujuan',
