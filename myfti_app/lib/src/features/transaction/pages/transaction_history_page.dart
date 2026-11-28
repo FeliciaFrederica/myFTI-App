@@ -40,7 +40,9 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
   DateTime get _dateFrom {
     if (_customRange != null) return _customRange!.start;
+
     final now = DateTime.now();
+
     switch (_period) {
       case 'weekly':
         return DateTime(
@@ -48,8 +50,10 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           now.month,
           now.day,
         ).subtract(const Duration(days: 6));
+
       case 'yearly':
         return DateTime(now.year);
+
       default:
         return DateTime(now.year, now.month);
     }
@@ -67,13 +71,16 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         999,
       );
     }
+
     final now = DateTime.now();
+
     return DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
   }
 
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addObserver(this);
     _loadTransactions();
     _startAutoRefresh();
@@ -165,9 +172,11 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
       setState(() {
         final existingIds = _transactions.map((item) => item.id).toSet();
+
         _transactions.addAll(
           result.transactions.where((item) => !existingIds.contains(item.id)),
         );
+
         _nextCursor = result.nextCursor;
         _hasMore = result.hasMore;
         _isLoadingMore = false;
@@ -302,36 +311,274 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     return '$hour:$minute';
   }
 
+  Future<DateTime?> _showDatePicker({
+    required DateTime initialDate,
+    required DateTime firstDate,
+    required DateTime lastDate,
+    required String helpText,
+  }) {
+    final safeInitialDate = initialDate.isBefore(firstDate)
+        ? firstDate
+        : initialDate.isAfter(lastDate)
+        ? lastDate
+        : initialDate;
+
+    return showDatePicker(
+      context: context,
+      initialDate: safeInitialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      helpText: helpText,
+      cancelText: 'Batal',
+      confirmText: 'Pilih',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF673AB7),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Color(0xFF2D1B46),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+  }
+
   Future<void> _selectDateRange() async {
     final now = DateTime.now();
-    final selected = await showDateRangePicker(
+    final today = DateTime(now.year, now.month, now.day);
+    final earliestDate = DateTime(2024, 1, 1);
+
+    var startDate = _customRange?.start ?? DateTime(now.year, now.month, 1);
+    var endDate = _customRange?.end ?? today;
+
+    if (endDate.isAfter(today)) endDate = today;
+    if (startDate.isBefore(earliestDate)) startDate = earliestDate;
+    if (startDate.isAfter(endDate)) startDate = endDate;
+
+    final selectedRange = await showModalBottomSheet<DateTimeRange>(
       context: context,
-      firstDate: DateTime(2024),
-      lastDate: now,
-      initialDateRange:
-          _customRange ??
-          DateTimeRange(
-            start: DateTime(now.year, now.month),
-            end: DateTime(now.year, now.month, now.day),
-          ),
-      helpText: 'Pilih rentang tanggal transaksi',
-      cancelText: 'Batal',
-      confirmText: 'Terapkan',
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Pilih Rentang Tanggal',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D1B46),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Tentukan tanggal mulai dan akhir riwayat.',
+                      style: TextStyle(fontSize: 12.5, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 18),
+                    _datePickerField(
+                      label: 'Tanggal Mulai',
+                      value: _formatDate(startDate),
+                      onTap: () async {
+                        final picked = await _showDatePicker(
+                          initialDate: startDate,
+                          firstDate: earliestDate,
+                          lastDate: today,
+                          helpText: 'Pilih Tanggal Mulai',
+                        );
+
+                        if (picked == null) return;
+
+                        setSheetState(() {
+                          startDate = picked;
+
+                          if (endDate.isBefore(startDate)) {
+                            endDate = startDate;
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _datePickerField(
+                      label: 'Tanggal Akhir',
+                      value: _formatDate(endDate),
+                      onTap: () async {
+                        final picked = await _showDatePicker(
+                          initialDate: endDate,
+                          firstDate: startDate,
+                          lastDate: today,
+                          helpText: 'Pilih Tanggal Akhir',
+                        );
+
+                        if (picked == null) return;
+
+                        setSheetState(() {
+                          endDate = picked;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 22),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(sheetContext),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF2D1B46),
+                                side: const BorderSide(
+                                  color: Color(0xFFD1C4E9),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Text('Batal'),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: SizedBox(
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(
+                                  sheetContext,
+                                  DateTimeRange(start: startDate, end: endDate),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF673AB7),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Text(
+                                'Terapkan',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
-    if (selected == null || !mounted) return;
+
+    if (selectedRange == null || !mounted) return;
+
     setState(() {
       _period = 'custom';
-      _customRange = selected;
+      _customRange = selectedRange;
       _nextCursor = null;
       _hasMore = true;
     });
+
     await _loadTransactions();
+  }
+
+  Widget _datePickerField({
+    required String label,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF2D1B46),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Material(
+          color: const Color(0xFFF8F6FC),
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onTap,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFD1C4E9)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 18,
+                    color: Color(0xFF673AB7),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2D1B46),
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.edit_calendar_outlined,
+                    size: 18,
+                    color: Color(0xFF673AB7),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildDateFilters() {
     final label = _customRange == null
         ? null
         : '${_formatDate(_customRange!.start)} – ${_formatDate(_customRange!.end)}';
+
     const flowOptions = <String, String>{
       'all': 'Semua transaksi',
       'incoming': 'Pemasukan',
@@ -385,16 +632,19 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                     ],
                     onChanged: (value) {
                       if (value == null) return;
+
                       if (value == 'custom') {
                         _selectDateRange();
                         return;
                       }
+
                       setState(() {
                         _period = value;
                         _customRange = null;
                         _nextCursor = null;
                         _hasMore = true;
                       });
+
                       _loadTransactions();
                     },
                   ),
